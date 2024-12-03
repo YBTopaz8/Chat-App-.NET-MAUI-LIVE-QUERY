@@ -1,0 +1,60 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFrameworks>netstandard2.0;net9.0</TargetFrameworks>
+        <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net9.0-windows10.0.19041.0</TargetFrameworks>
+
+        <DocumentationFile>bin\Release\netstandard2.0\Parse.xml</DocumentationFile>
+        <Version>3.0.2</Version>
+        <LangVersion>latest</LangVersion>
+        
+        <Authors>Parse</Authors>
+        <PackageProjectUrl>https://parseplatform.org/</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/parse-community/Parse-SDK-dotNET/</RepositoryUrl>
+        <PackageIconUrl></PackageIconUrl>
+        <RepositoryType>GitHub</RepositoryType>
+        <Description>This is the official package for the Parse .NET Standard SDK. Add a cloud backend to any platform supporting .NET Standard 2.0.</Description>
+        <Copyright>Copyright © Parse Platform</Copyright>
+
+        <PackageTags>Parse;parse-platform;parse-server;netstandard;netstandard2.0;backend;sdk;app</PackageTags>
+        <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <PackageIcon>parse-logo.png</PackageIcon>
+        <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    </PropertyGroup>
+
+    <ItemGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+        <PackageReference Include="OpenCover" Version="4.7.1221" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Remove="parse-logo.png" />
+      <None Include="parse-logo.png">
+        <Pack>True</Pack>
+        <PackagePath></PackagePath>
+      </None>
+    </ItemGroup>
+
+    <ItemGroup>
+      <EmbeddedResource Update="Resources.resx">
+        <Generator>ResXFileCodeGenerator</Generator>
+        <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+      </EmbeddedResource>
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Include="..\LICENSE">
+        <Pack>True</Pack>
+        <PackagePath></PackagePath>
+      </None>
+    </ItemGroup>
+
+    <ItemGroup>
+      <Compile Update="Resources.Designer.cs">
+        <DesignTime>True</DesignTime>
+        <AutoGen>True</AutoGen>
+        <DependentUpon>Resources.resx</DependentUpon>
+      </Compile>
+    </ItemGroup>
+
+</Project>
