@@ -1,0 +1,35 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="LiveQueryChatAppMAUI.MainPage"
+             xmlns:local="clr-namespace:LiveQueryChatAppMAUI"
+             x:DataType="local:ViewModel">
+
+    <Grid RowDefinitions="Auto,350,*">
+        <VerticalStackLayout Padding="30,0" Spacing="25"
+                             Grid.Row="0">
+            <Button Text="Quick Login" Command="{Binding LoginUserCommand}"/>
+            <Button Text="Connect To LiveQueries" Command="{Binding SetupLiveQueriesCommand}"/>
+        </VerticalStackLayout>
+        <CollectionView ItemsSource="{Binding Messages}" EmptyView="Empty"
+                        Grid.Row="1" BackgroundColor="#111111">
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="local:TestChat">
+                    <VerticalStackLayout>
+                        <Label Text="{Binding Msg}" TextColor="White"/>
+                        <Label Text="{Binding Platform, StringFormat='Sent via {0}'}"/>                        
+                    </VerticalStackLayout>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <VerticalStackLayout Grid.Row="2">
+            <Entry Placeholder="Type a Text" Text="{Binding SelectedMsg.Msg}"/>
+            <HorizontalStackLayout>
+                <Button Text="Send" Command="{Binding SendMessageCommand}"/>
+            </HorizontalStackLayout>
+        </VerticalStackLayout>
+        
+    </Grid>
+
+</ContentPage>
