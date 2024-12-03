@@ -169,7 +169,7 @@ public partial class ViewModel : ObservableObject, IParseLiveQueryClientCallback
     [RelayCommand]
     public async Task LoginUser()
     {
-
+        
 
         ParseUser signUpUser = new ParseUser();
         //signUpUser.Username = CurrentUserLocal.UserName;

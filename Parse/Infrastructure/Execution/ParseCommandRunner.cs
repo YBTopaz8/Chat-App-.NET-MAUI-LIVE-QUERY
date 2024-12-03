@@ -107,10 +107,7 @@ public class ParseCommandRunner : IParseCommandRunner
         }
         catch (Exception ex)
         {
-            return new Tuple<HttpStatusCode, IDictionary<string, object>>(
-                HttpStatusCode.BadRequest,
-                new Dictionary<string, object>
-                {
+            return new Tuple<HttpStatusCode, IDictionary<string, object>>(HttpStatusCode.BadRequest,new Dictionary<string, object>{
             { "error", "Invalid or alternatively-formatted response received from server." },
             { "exception", ex.Message }
                 }

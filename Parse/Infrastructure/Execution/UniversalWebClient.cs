@@ -39,11 +39,7 @@ public class UniversalWebClient : IWebClient
 
     BCLWebClient Client { get; set; }
 
-    public async Task<Tuple<HttpStatusCode, string>> ExecuteAsync(
-WebRequest httpRequest,
-IProgress<IDataTransferLevel> uploadProgress,
-IProgress<IDataTransferLevel> downloadProgress,
-CancellationToken cancellationToken)
+    public async Task<Tuple<HttpStatusCode, string>> ExecuteAsync(WebRequest httpRequest,IProgress<IDataTransferLevel> uploadProgress,IProgress<IDataTransferLevel> downloadProgress,CancellationToken cancellationToken)
     {
         uploadProgress ??= new Progress<IDataTransferLevel>();
         downloadProgress ??= new Progress<IDataTransferLevel>();
