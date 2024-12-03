@@ -18,8 +18,9 @@ public partial class MainPage : ContentPage
     {
         InitializeComponent();
         BindingContext = vm;
+        
     }
-    ViewModel ViewModel;
+    
     private void OnCounterClicked(object sender, EventArgs e)
     {
         count++;
@@ -87,35 +88,40 @@ public partial class MainPage : ContentPage
         {
             try
             {
-                var value = property.GetValue(model);              
-
-                // Handle special types like DateTimeOffset
-                if (property.PropertyType == typeof(DateTimeOffset))
+                var value = property.GetValue(model);
+                if (value != null)
                 {
-                    var val = (DateTimeOffset)value;
-                    parseObject[property.Name] = val.Date;
-                    continue;
-                }
-
-                // Handle string as string (required for Parse compatibility)
-                if (property.PropertyType == typeof(string))
-                {
-                    if(value != null && !string.IsNullOrEmpty(value.ToString()))
+                    // Handle special types like DateTimeOffset
+                    if (property.PropertyType == typeof(DateTimeOffset))
                     {
-                        parseObject[property.Name] = value.ToString();
+                        var val = (DateTimeOffset?)value;
+                        if (val is not null)
+                        {
+                            parseObject[property.Name] = val.Value.Date;
+                        }
                         continue;
                     }
-                }
 
-                // Add a fallback check for unsupported complex types
-                if (value.GetType().Namespace?.StartsWith("Realms") == true)
-                {
-                    Debug.WriteLine($"Skipped unsupported Realm type: {property.Name}");
-                    continue;
-                }
+                    // Handle string as string (required for Parse compatibility)
+                    if (property.PropertyType == typeof(string))
+                    {
+                        if(value != null && !string.IsNullOrEmpty(value.ToString()))
+                        {
+                            parseObject[property.Name] = value.ToString();
+                            continue;
+                        }
+                    }
 
-                // For other types, directly set the value
-                parseObject[property.Name] = value;
+                    // Add a fallback check for unsupported complex types
+                    if (value!.GetType().Namespace?.StartsWith("Realms") == true)
+                    {
+                        Debug.WriteLine($"Skipped unsupported Realm type: {property.Name}");
+                        continue;
+                    }
+
+                    // For other types, directly set the value
+                    parseObject[property.Name] = value;
+                }
             }
             catch (Exception ex)
             {
@@ -136,7 +142,7 @@ public partial class ViewModel : ObservableObject, IParseLiveQueryClientCallback
     [ObservableProperty]
     ObservableCollection<TestChat> messages=new();
     [ObservableProperty]
-    string username;
+    string? username;
     [ObservableProperty]
     TestChat selectedMsg =new();
 
@@ -214,7 +220,7 @@ public partial class ViewModel : ObservableObject, IParseLiveQueryClientCallback
             var query = ParseClient.Instance.GetQuery("TestChat");
             //.WhereEqualTo("IsDeleted", false);
 
-            var sub = LiveClient.Subscribe(query);
+            var sub = LiveClient!.Subscribe(query);
             LiveClient.RegisterListener(this);
 
 
@@ -296,9 +302,9 @@ public partial class TestChat : ObservableObject
     [ObservableProperty]
     string objectId=string.Empty;
     [ObservableProperty]
-    string msg;
+    string? msg;
     [ObservableProperty]
-    string username;
+    string? username;
     [ObservableProperty]
     string platform = $"{DeviceInfo.Platform.ToString()} version {DeviceInfo.VersionString}";
     [ObservableProperty]
