@@ -13,7 +13,14 @@ public partial class App : Application
         InitializeComponent();
         InitializeParseClient();
     }
+    private void CurrentDomain_FirstChanceException(object? sender, System.Runtime.ExceptionServices.FirstChanceExceptionEventArgs e)
+    {
+        Debug.WriteLine($"********** UNHANDLED EXCEPTION! Details: {e.Exception} | {e.Exception.InnerException?.Message} | {e.Exception.Source} " +
+            $"| {e.Exception.StackTrace} | {e.Exception.Message} || {e.Exception.Data.Values} {e.Exception.HelpLink}");
 
+        //var home = IPlatformApplication.Current!.Services.GetService<HomePageVM>();
+        //await home.ExitingApp();
+    }
     protected override Window CreateWindow(IActivationState? activationState)
     {
         return new Window(new AppShell());

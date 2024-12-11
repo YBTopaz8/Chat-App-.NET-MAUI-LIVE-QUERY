@@ -3,7 +3,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="LiveQueryChatAppMAUI.MainPage"
              xmlns:local="clr-namespace:LiveQueryChatAppMAUI"
-             x:DataType="local:ViewModel">
+             x:DataType="local:ViewModel"
+             x:Name="myPage">
 
     <Grid RowDefinitions="Auto,350,*">
         <VerticalStackLayout Padding="30,0" Spacing="25"
@@ -17,14 +18,17 @@
                 <DataTemplate x:DataType="local:TestChat">
                     <VerticalStackLayout>
                         <Label Text="{Binding Msg}" TextColor="White"/>
-                        <Label Text="{Binding Platform, StringFormat='Sent via {0}'}"/>                        
+                        <Label Text="{Binding Platform, StringFormat='Sent via {0}'}"/>
+                        <Button Text="Edit" CommandParameter="{Binding .}"
+                                WidthRequest="250" Clicked="Button_Clicked_1"/>
+                        <Button Text="Delete" WidthRequest="250" Clicked="Button_Clicked" CommandParameter="{Binding .}"/>
                     </VerticalStackLayout>
                 </DataTemplate>
             </CollectionView.ItemTemplate>
         </CollectionView>
 
         <VerticalStackLayout Grid.Row="2">
-            <Entry Placeholder="Type a Text" Text="{Binding SelectedMsg.Msg}"/>
+            <Entry Placeholder="Type a Text" Text="{Binding Message}"/>
             <HorizontalStackLayout>
                 <Button Text="Send" Command="{Binding SendMessageCommand}"/>
             </HorizontalStackLayout>

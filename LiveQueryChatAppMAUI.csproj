@@ -60,21 +60,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <AndroidResource Remove="ParseLiveQuery\**" />
-	  <AndroidResource Remove="Parse\**" />
-	  <Compile Remove="ParseLiveQuery\**" />
-	  <Compile Remove="Parse\**" />
-	  <EmbeddedResource Remove="ParseLiveQuery\**" />
-	  <EmbeddedResource Remove="Parse\**" />
-	  <MauiCss Remove="ParseLiveQuery\**" />
-	  <MauiCss Remove="Parse\**" />
-	  <MauiXaml Remove="ParseLiveQuery\**" />
-	  <MauiXaml Remove="Parse\**" />
-	  <None Remove="ParseLiveQuery\**" />
-	  <None Remove="Parse\**" />
-	</ItemGroup>
-
-	<ItemGroup>
 		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="9.0.0" />
 	</ItemGroup>
@@ -86,11 +71,8 @@
     
     <PackageReference Include="CommunityToolkit.Maui" Version="9.1.1" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.3.2" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <ProjectReference Include="ParseLiveQuery\ParseLiveQuery.csproj" />
-	  <ProjectReference Include="Parse\Parse.csproj" />
+    <PackageReference Include="YB.ParseLiveQueryDotNet" Version="2.0.0" />
+    
 	</ItemGroup>
 
 </Project>
