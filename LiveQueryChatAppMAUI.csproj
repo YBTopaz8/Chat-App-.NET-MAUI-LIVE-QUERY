@@ -71,8 +71,12 @@
     
     <PackageReference Include="CommunityToolkit.Maui" Version="9.1.1" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.3.2" />
-    <PackageReference Include="YB.ParseLiveQueryDotNet" Version="2.0.0" />
     
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\Dimmer-MAUI\ParseLiveQ\ParseLiveQuery\ParseLiveQuery.csproj" />
+	  <ProjectReference Include="..\Dimmer-MAUI\ParseServer\Parse\Parse.csproj" />
 	</ItemGroup>
 
 </Project>
