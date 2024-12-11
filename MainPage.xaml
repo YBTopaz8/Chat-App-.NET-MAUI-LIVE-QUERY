@@ -30,7 +30,8 @@
         <VerticalStackLayout Grid.Row="2">
             <Entry Placeholder="Type a Text" Text="{Binding Message}"/>
             <HorizontalStackLayout>
-                <Button Text="Send" Command="{Binding SendMessageCommand}"/>
+                <Button Text="Send" Command="{Binding SendMessageCommand}"
+                        />
             </HorizontalStackLayout>
         </VerticalStackLayout>
         

@@ -6,7 +6,9 @@ using System.Diagnostics;
 using Parse.LiveQuery;
 using Parse;
 using Parse.Abstractions.Platform.Objects;
-using System.Reactive.Linq;
+using Parse.Abstractions.Internal;
+using Parse.Infrastructure;
+
 namespace LiveQueryChatAppMAUI;
 
 public partial class MainPage : ContentPage
@@ -28,7 +30,7 @@ public partial class MainPage : ContentPage
     }
 
 
-    public static T MapToModelFromParseObject<T>(IObjectState objState) where T : new()
+    public static T MapToModelFromParseObject<T>(ParseObject parseObject) where T : new()
     {
         var model = new T();
         var properties = typeof(T).GetProperties();
@@ -39,10 +41,10 @@ public partial class MainPage : ContentPage
             {
 
                 // Check if the ParseObject contains the property name
-                if (objState.ContainsKey(property.Name))
+                if (parseObject.ContainsKey(property.Name))
                 {
-                    var value = objState[property.Name];
-                    
+                    var value = parseObject[property.Name];
+
                     if (value != null)
                     {
                         // Handle special types like DateTimeOffset
@@ -57,10 +59,6 @@ public partial class MainPage : ContentPage
                         {
                             property.SetValue(model, new string(objectIdStr));
                             continue;
-                        }
-                        if (property.PropertyType == typeof(string) && property.Name.Equals("objectId)"))
-                        {
-                            property.SetValue(model,value.ToString());
                         }
 
                         if (property.CanWrite && property.PropertyType.IsAssignableFrom(value.GetType()))
@@ -80,8 +78,6 @@ public partial class MainPage : ContentPage
 
         return model;
     }
-
-
     public static ParseObject MapToParseObject<T>(T model, string className)
     {
         var parseObject = new ParseObject(className);
@@ -146,13 +142,13 @@ public partial class MainPage : ContentPage
         Vm.DeleteMsg();
     }
 
-    private void Button_Clicked_1(object sender, EventArgs e)
+    private async void Button_Clicked_1(object sender, EventArgs e)
     {
         var mod = (Button)sender;
         var s = (TestChat)mod.BindingContext;
         s.Msg = "Updated";
         Vm.SelectedMsg = s;
-        Vm.SendMessage();
+       await Vm.UpdateMessage();
     }
 }
 
@@ -170,10 +166,10 @@ public partial class ViewModel : ObservableObject, IParseLiveQueryClientCallback
 
     }
     [RelayCommand]
-    async Task SetupLiveQueries()
+    void SetupLiveQueries()
     {
         LiveClient = new ParseLiveQueryClient();
-        SetupLiveQuery();
+     _= SetupLiveQuery();
     }
     [RelayCommand]
     public async Task LoginUser()
@@ -221,72 +217,69 @@ public partial class ViewModel : ObservableObject, IParseLiveQueryClientCallback
     }
     public ParseLiveQueryClient? LiveClient { get; set; }
 
-    void SetupLiveQuery()
+
+
+    async Task SetupLiveQuery()
     {
+        var curU = await ParseClient.Instance.CurrentUserController.GetAsync(ParseClient.Instance);
+        ParseACL aCL = new();
+        aCL.SetWriteAccess(curU, true);
+        
         try
         {
-            var songsQuery = ParseClient.Instance.GetQuery("TestChat"); // Specify the generic type here
+            var query = ParseClient.Instance.GetQuery("TestChat").WhereEqualTo("ACL",curU);
+            //.WhereEqualTo("IsDeleted", false);
 
-            // Explicitly specify the type argument for Subscribe
-            var subscription = LiveClient.Subscribe(songsQuery);
-            
-            // Connect to the LiveQuery server
-            LiveClient.ConnectIfNeeded();
-            LiveClient.OnConnected
-            .Subscribe(client => Debug.WriteLine("LiveQuery connected."));
+            var sub = LiveClient!.Subscribe(query);
+            LiveClient.RegisterListener(this);
 
-            LiveClient.OnDisconnected
-                .Subscribe(info => Debug.WriteLine(info.userInitiated
-                    ? "LiveQuery disconnected by user."
-                    : "LiveQuery disconnected by server."));
 
-            LiveClient.OnError
-                .Subscribe(ex => Debug.WriteLine($"Error in LiveQuery: {ex.Message}"));
+            sub.HandleSubscribe(async query =>
+            {
+                await Shell.Current.DisplayAlert("Subscribed", $"Subscribed to query{query.GetClassName()}", "OK");
+                Debug.WriteLine($"Subscribed to query: {query.GetClassName()}");
+            })
+            .HandleEvents((query, objEvent, obj) =>
+            {
+                var newComment = MainPage.MapToModelFromParseObject<TestChat>(obj);
+                               
+                obj.TryGetValue("objectId", out string objId);
+                newComment.ObjectId = objId;
 
-            LiveClient.OnSubscribed
-                .Subscribe(e => Debug.WriteLine($"Subscribed to query: {e.requestId}"));
-
-            // Listen to object events (create, update, delete)
-            LiveClient.OnObjectEvent
-                .Where(e => e.subscription == subscription)
-                .Subscribe(e =>
+                if (objEvent == Subscription.Event.Create)
                 {
-                    var evtType = e.evt;
-                                        
-                    TestChat? newComment = MainPage.MapToModelFromParseObject<TestChat>(e.objState);
-                    newComment.ObjectId = e.objState.ObjectId;
-                    switch (evtType)
+                    Messages?.Add(newComment);
+                }
+                else if (objEvent == Subscription.Event.Update)
+                {
+                    var f = Messages.FirstOrDefault(newComment);
+                    if (f is not null)
                     {
-                        case Subscription.Event.Create:
-                            Messages?.Add(newComment);
-                            break;
-                        case Subscription.Event.Update:
-                            var existing = Messages?.FirstOrDefault(m => m.ObjectId == newComment.ObjectId);
-                            if (existing is not null)
-                            {
-                                Messages.Remove(existing);
-                                Messages.Add(newComment);
-                            }
-                            break;
-                        case Subscription.Event.Delete:
-                            var toDelete = Messages?.FirstOrDefault(m => m.ObjectId == newComment.ObjectId);
-                            if (toDelete is not null)
-                            {
-                                Messages.Remove(toDelete);
-                            }
-                            break;
+                        Messages.Remove(f);
+                        Messages.Add(newComment);
                     }
-
-                    Debug.WriteLine($"Event {evtType} occurred for object: {newComment.ObjectId}");
-                });
-
-            // Handle errors from the WebSocket
-            LiveClient.OnError
-                .Subscribe(ex =>
+                }
+                else if (objEvent == Subscription.Event.Delete)
                 {
-                    Debug.WriteLine($"Error in LiveQuery WebSocket: {ex.Message}");
-                });
+                    var f = Messages.FirstOrDefault(newComment);
+                    if (f is not null)
+                    {
+                        Messages.Remove(f);
+                    }
+                }
+                Debug.WriteLine($"Event {objEvent} occurred for object: {obj.ObjectId}");
+            })
+            .HandleError((query, exception) =>
+            {
+                Debug.WriteLine($"Error in query for class {query.GetClassName()}: {exception.Message}");
+            })
+            .HandleUnsubscribe(query =>
+            {
+                Debug.WriteLine($"Unsubscribed from query: {query.GetClassName()}");
+            });
 
+            // Connect asynchronously
+            await Task.Run(() => LiveClient.ConnectIfNeeded());
         }
         catch (IOException ex)
         {
@@ -298,29 +291,61 @@ public partial class ViewModel : ObservableObject, IParseLiveQueryClientCallback
         }
     }
 
+
     [ObservableProperty]
     string? message;
 
 
     [RelayCommand]
-    public void SendMessage()
+    public async void SendMessage()
     {
         TestChat chat = new();
         chat.Msg = Message;
         chat.Username = "YBTopaz8";
         
-        var pChat = MainPage.MapToParseObject(chat, "TestChat");
-        if (string.IsNullOrEmpty(pChat.ObjectId))
-        {
-            if (!string.IsNullOrEmpty(SelectedMsg.ObjectId))
-            {
-                pChat.Set("objectId", SelectedMsg.ObjectId);
-                pChat.Set("ObjectId", SelectedMsg.ObjectId);
-            }
-        }
-
-        _ =pChat.SaveAsync();
+        var pChat = MainPage.MapToParseObject(chat, "TestChat"); //here, the objectid is not set, so when it goes to server, server will think it's new, but it's not.
         
+        var curU = await ParseClient.Instance.CurrentUserController.GetAsync(ParseClient.Instance);
+        //ParseACL aCL = new();
+        //aCL.SetWriteAccess(curU, true);
+        //aCL.SetReadAccess(curU, true);
+        //pChat.ACL = aCL;
+        await pChat.SaveAsync();
+
+
+        // Step 1: Query the existing object by a unique identifier (e.g., Username, Msg)
+        var query = ParseClient.Instance.GetQuery("TestChat")
+            .WhereEqualTo("ACL", curU); // Filter condition
+
+        var existingChat = await query.FindAsync(); // Fetch the first matching object 
+    }
+    public async Task UpdateMessage()
+    {
+        try
+        {
+            // Step 1: Query the existing object by a unique identifier (e.g., Username, Msg)
+            var query = ParseClient.Instance.GetQuery("TestChat")
+                .WhereEqualTo("Username", "YBTopaz8"); // Filter condition
+                
+
+            var existingChat = await query.FirstAsync(); // Fetch the first matching object
+
+            // Step 2: Update the properties of the fetched object
+            existingChat["Msg"] = "NowYB"; // Update message or other properties as needed
+
+            // Step 3: Save the updated object back to the server
+            await existingChat.SaveAsync();
+
+            Console.WriteLine("Message updated successfully!");
+        }
+        catch (ParseFailureException ex) when (ex.Code == ParseFailureException.ErrorCode.ObjectNotFound)
+        {
+            Console.WriteLine("No matching object found to update.");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error updating message: {ex.Message}");
+        }
     }
 
     [RelayCommand]
