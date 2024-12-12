@@ -8,6 +8,8 @@ using Parse;
 using Parse.Abstractions.Platform.Objects;
 using Parse.Abstractions.Internal;
 using Parse.Infrastructure;
+using System.Reactive.Linq;
+using System.Reflection;
 
 namespace LiveQueryChatAppMAUI;
 
@@ -145,10 +147,8 @@ public partial class MainPage : ContentPage
     private async void Button_Clicked_1(object sender, EventArgs e)
     {
         var mod = (Button)sender;
-        var s = (TestChat)mod.BindingContext;
-        s.Msg = "Updated";
-        Vm.SelectedMsg = s;
-       await Vm.UpdateMessage();
+        var s = (TestChat)mod.BindingContext;        
+       await Vm.UpdateMessage(s.UniqueKey);
     }
 }
 
@@ -169,7 +169,7 @@ public partial class ViewModel : ObservableObject, IParseLiveQueryClientCallback
     void SetupLiveQueries()
     {
         LiveClient = new ParseLiveQueryClient();
-     _= SetupLiveQuery();
+        SetupLiveQuery();
     }
     [RelayCommand]
     public async Task LoginUser()
@@ -219,113 +219,106 @@ public partial class ViewModel : ObservableObject, IParseLiveQueryClientCallback
 
 
 
-    async Task SetupLiveQuery()
+    void SetupLiveQuery()
     {
-        var curU = await ParseClient.Instance.CurrentUserController.GetAsync(ParseClient.Instance);
-        ParseACL aCL = new();
-        aCL.SetWriteAccess(curU, true);
-        
         try
         {
-            var query = ParseClient.Instance.GetQuery("TestChat").WhereEqualTo("ACL",curU);
-            //.WhereEqualTo("IsDeleted", false);
+            var query = ParseClient.Instance.GetQuery("TestChat");
+            var subscription = LiveClient.Subscribe(query);
 
-            var sub = LiveClient!.Subscribe(query);
-            LiveClient.RegisterListener(this);
+            LiveClient.ConnectIfNeeded();
 
+            // Rx event streams
+            LiveClient.OnConnected
+                .Subscribe(_ => Debug.WriteLine("LiveQuery connected."));
+            LiveClient.OnDisconnected
+                .Subscribe(info => Debug.WriteLine(info.userInitiated
+                    ? "User disconnected."
+                    : "Server disconnected."));
+            LiveClient.OnError
+                .Subscribe(ex => Debug.WriteLine("LQ Error: " + ex.Message));
+            LiveClient.OnSubscribed
+                .Subscribe(e => Debug.WriteLine("Subscribed to: " + e.requestId));
 
-            sub.HandleSubscribe(async query =>
-            {
-                await Shell.Current.DisplayAlert("Subscribed", $"Subscribed to query{query.GetClassName()}", "OK");
-                Debug.WriteLine($"Subscribed to query: {query.GetClassName()}");
-            })
-            .HandleEvents((query, objEvent, obj) =>
-            {
-                var newComment = MainPage.MapToModelFromParseObject<TestChat>(obj);
-                               
-                obj.TryGetValue("objectId", out string objId);
-                newComment.ObjectId = objId;
-
-                if (objEvent == Subscription.Event.Create)
+            // Handle object events (Create/Update/Delete)
+            LiveClient.OnObjectEvent
+                .Where(e => e.subscription == subscription)
+                
+                .Subscribe(e =>
                 {
-                    Messages?.Add(newComment);
-                }
-                else if (objEvent == Subscription.Event.Update)
-                {
-                    var f = Messages.FirstOrDefault(newComment);
-                    if (f is not null)
+                    Debug.WriteLine($"Message before {Message?.Length}");
+                    TestChat chat = new();
+                    var objData = (e.objectDictionnary as Dictionary<string, object>);
+                    
+                    switch (e.evt)
                     {
-                        Messages.Remove(f);
-                        Messages.Add(newComment);
-                    }
-                }
-                else if (objEvent == Subscription.Event.Delete)
-                {
-                    var f = Messages.FirstOrDefault(newComment);
-                    if (f is not null)
-                    {
-                        Messages.Remove(f);
-                    }
-                }
-                Debug.WriteLine($"Event {objEvent} occurred for object: {obj.ObjectId}");
-            })
-            .HandleError((query, exception) =>
-            {
-                Debug.WriteLine($"Error in query for class {query.GetClassName()}: {exception.Message}");
-            })
-            .HandleUnsubscribe(query =>
-            {
-                Debug.WriteLine($"Unsubscribed from query: {query.GetClassName()}");
-            });
+                        
+                        case Subscription.Event.Enter:
+                            Debug.WriteLine("entered");
+                            break;
+                        case Subscription.Event.Leave:
+                            Debug.WriteLine("Left");
+                            break;
+                            case Subscription.Event.Create:
+                            chat = ObjectMapper.MapFromDictionary<TestChat>(objData);
+                            Messages.Add(chat);
+                            break;
+                            case Subscription.Event.Update:
+                            chat = ObjectMapper.MapFromDictionary<TestChat>(objData);
+                            var obj = Messages.FirstOrDefault(x => x.UniqueKey == chat.UniqueKey);
+                            
+                            Messages.RemoveAt(Messages.IndexOf(obj));
+                            Messages.Add(chat);
 
-            // Connect asynchronously
-            await Task.Run(() => LiveClient.ConnectIfNeeded());
-        }
-        catch (IOException ex)
-        {
-            Console.WriteLine($"Connection error: {ex.Message}");
+                            break;
+                            case Subscription.Event.Delete:
+                            chat = ObjectMapper.MapFromDictionary<TestChat>(objData);
+                            var objj = Messages.FirstOrDefault(x => x.UniqueKey == chat.UniqueKey);
+
+                            Messages.RemoveAt(Messages.IndexOf(objj));
+                            break;
+                        default:
+                            break;
+                    }
+                    Debug.WriteLine($"Message after {Message.Length}");
+                    Debug.WriteLine($"Event {e.evt} on object {e.objectDictionnary.GetType()}");
+                });
+
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"SetupLiveQuery encountered an error: {ex.Message}");
+            Debug.WriteLine("SetupLiveQuery Error: " + ex.Message);
         }
     }
-
 
     [ObservableProperty]
     string? message;
 
 
     [RelayCommand]
-    public async void SendMessage()
+    public async Task SendMessage()
     {
         TestChat chat = new();
         chat.Msg = Message;
         chat.Username = "YBTopaz8";
-        
-        var pChat = MainPage.MapToParseObject(chat, "TestChat"); //here, the objectid is not set, so when it goes to server, server will think it's new, but it's not.
-        
-        var curU = await ParseClient.Instance.CurrentUserController.GetAsync(ParseClient.Instance);
-        //ParseACL aCL = new();
-        //aCL.SetWriteAccess(curU, true);
-        //aCL.SetReadAccess(curU, true);
-        //pChat.ACL = aCL;
+        var pChat = new ParseObject("TestChat");
+        pChat["Msg"] = chat.Msg;
+        pChat["Username"] = chat.Username;
+        pChat["Platform"] = chat.Platform;
+        pChat["UniqueKey"] = chat.UniqueKey;
+        ParseACL acl = new();
+        acl.SetReadAccess(ParseClient.Instance.GetCurrentUser(), true); 
+        acl.SetWriteAccess(ParseClient.Instance.GetCurrentUser(), true);
         await pChat.SaveAsync();
 
-
-        // Step 1: Query the existing object by a unique identifier (e.g., Username, Msg)
-        var query = ParseClient.Instance.GetQuery("TestChat")
-            .WhereEqualTo("ACL", curU); // Filter condition
-
-        var existingChat = await query.FindAsync(); // Fetch the first matching object 
     }
-    public async Task UpdateMessage()
+    public async Task UpdateMessage(string key)
     {
         try
         {
             // Step 1: Query the existing object by a unique identifier (e.g., Username, Msg)
             var query = ParseClient.Instance.GetQuery("TestChat")
-                .WhereEqualTo("Username", "YBTopaz8"); // Filter condition
+                .WhereEqualTo("UniqueKey",key ); // Filter condition
                 
 
             var existingChat = await query.FirstAsync(); // Fetch the first matching object
@@ -333,34 +326,43 @@ public partial class ViewModel : ObservableObject, IParseLiveQueryClientCallback
             // Step 2: Update the properties of the fetched object
             existingChat["Msg"] = "NowYB"; // Update message or other properties as needed
 
+            
             // Step 3: Save the updated object back to the server
             await existingChat.SaveAsync();
 
-            Console.WriteLine("Message updated successfully!");
+            Debug.WriteLine("Message updated successfully!");
         }
         catch (ParseFailureException ex) when (ex.Code == ParseFailureException.ErrorCode.ObjectNotFound)
         {
-            Console.WriteLine("No matching object found to update.");
+            Debug.WriteLine("No matching object found to update.");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error updating message: {ex.Message}");
+            Debug.WriteLine($"Error updating message: {ex.Message}");
         }
     }
 
     [RelayCommand]
-    public void DeleteMsg()
+    public async void DeleteMsg()
     {
         SelectedMsg.IsDeleted = true;
-        var pChat = MainPage.MapToParseObject(SelectedMsg, "TestChat");
-        pChat.ObjectId = SelectedMsg.ObjectId;
-        _ = pChat.DeleteAsync();
+        // Step 1: Query the existing object by a unique identifier (e.g., Username, Msg)
+        var query = ParseClient.Instance.GetQuery("TestChat")
+            .WhereEqualTo("UniqueKey", SelectedMsg.UniqueKey); // Filter condition 
+        var pChat = await query.FirstOrDefaultAsync();
+        if (pChat is not null)
+        {
+            _ = pChat.DeleteAsync();
+        }
+
+        //Heads up. handling cross device deletion is tricky. Make sure BOTH devices produce the same UniqueKey (or similar) and that both will that data when they create/update.
     }
+
 }
 public partial class TestChat : ObservableObject
 {
     [ObservableProperty]
-    string objectId=string.Empty;
+    string uniqueKey=Guid.NewGuid().ToString();
     [ObservableProperty]
     string? msg;
     [ObservableProperty]
@@ -369,4 +371,72 @@ public partial class TestChat : ObservableObject
     string platform = $"{DeviceInfo.Platform.ToString()} version {DeviceInfo.VersionString}";
     [ObservableProperty]
     bool isDeleted;
+}
+
+
+
+public static class ObjectMapper
+{
+    /// <summary>
+    /// Maps values from a dictionary to an instance of type T.
+    /// Logs any keys that don't match properties in T.
+    ///     
+    /// Helper to Map from Parse Dictionnary Response to Model
+    /// Example usage TestChat chat = ObjectMapper.MapFromDictionary<TestChat>(objData);    
+    /// </summary>
+    public static T MapFromDictionary<T>(IDictionary<string, object> source) where T : new()
+    {
+        // Create an instance of T
+        T target = new T();
+
+        // Get all writable properties of T
+        var properties = typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Where(p => p.CanWrite)
+            .ToDictionary(p => p.Name, p => p, StringComparer.OrdinalIgnoreCase);
+
+        // Track unmatched keys
+        List<string> unmatchedKeys = new();
+
+        foreach (var kvp in source)
+        {
+            if (properties.TryGetValue(kvp.Key, out var property))
+            {
+                try
+                {
+                    // Convert and assign the value to the property
+                    if (kvp.Value != null && property.PropertyType.IsAssignableFrom(kvp.Value.GetType()))
+                    {
+                        property.SetValue(target, kvp.Value);
+                    }
+                    else if (kvp.Value != null)
+                    {
+                        // Attempt conversion for non-directly assignable types
+                        var convertedValue = Convert.ChangeType(kvp.Value, property.PropertyType);
+                        property.SetValue(target, convertedValue);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Failed to set property {property.Name}: {ex.Message}");
+                }
+            }
+            else
+            {
+                // Log unmatched keys
+                unmatchedKeys.Add(kvp.Key);
+            }
+        }
+
+        // Log keys that don't match
+        if (unmatchedKeys.Count > 0)
+        {
+            Debug.WriteLine("Unmatched Keys:");
+            foreach (var key in unmatchedKeys)
+            {
+                Debug.WriteLine($"- {key}");
+            }
+        }
+
+        return target;
+    }
 }
