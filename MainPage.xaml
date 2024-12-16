@@ -4,37 +4,49 @@
              x:Class="LiveQueryChatAppMAUI.MainPage"
              xmlns:local="clr-namespace:LiveQueryChatAppMAUI"
              x:DataType="local:ViewModel"
-             x:Name="myPage">
+             x:Name="myPage"
+             Title="{Binding Messages.Count,StringFormat='{0} Msgs'}">
 
-    <Grid RowDefinitions="Auto,350,*">
+    <ScrollView>
+        
+    <Grid RowDefinitions="Auto,150,*" HorizontalOptions="Start"
+          BackgroundColor="#1E1E1E">
         <VerticalStackLayout Padding="30,0" Spacing="25"
                              Grid.Row="0">
             <Button Text="Quick Login" Command="{Binding LoginUserCommand}"/>
             <Button Text="Connect To LiveQueries" Command="{Binding SetupLiveQueriesCommand}"/>
         </VerticalStackLayout>
-        <CollectionView ItemsSource="{Binding Messages}" EmptyView="Empty"
-                        Grid.Row="1" BackgroundColor="#111111">
+        <CollectionView ItemsSource="{Binding Messages}" EmptyView="Empty" x:Name="MsgColView"
+                        
+                        Grid.Row="1" BackgroundColor="#111111" >
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="local:TestChat">
-                    <VerticalStackLayout>
-                        <Label Text="{Binding Msg}" TextColor="White"/>
-                        <Label Text="{Binding Platform, StringFormat='Sent via {0}'}"/>
-                        <Button Text="Edit" CommandParameter="{Binding .}"
-                                WidthRequest="250" Clicked="Button_Clicked_1"/>
-                        <Button Text="Delete" WidthRequest="250" Clicked="Button_Clicked" CommandParameter="{Binding .}"/>
+                    <VerticalStackLayout Margin="20,0">
+                            <Label Text="{Binding Msg}" TextColor="White" FontSize="12"/>
+                            <Label Text="{Binding Platform, StringFormat='Sent via {0}'}" FontSize="12"
+                                   TextColor="{OnIdiom Watch=Purple, Desktop=Blue, Phone=Orange}"/>
+                            <Button Text="Edit" CommandParameter="{Binding .}" HorizontalOptions="Start"
+                                WidthRequest="250" Clicked="Button_Clicked_1" FontSize="12" HeightRequest="35"
+                                    BackgroundColor="Transparent" TextColor="White"/>
+                        <Button Text="Delete" WidthRequest="250" Clicked="Button_Clicked" 
+                                HorizontalOptions="Start" FontSize="12" HeightRequest="35"
+                                BackgroundColor="Transparent" TextColor="Red"
+                                CommandParameter="{Binding .}"/>
                     </VerticalStackLayout>
                 </DataTemplate>
             </CollectionView.ItemTemplate>
         </CollectionView>
 
-        <VerticalStackLayout Grid.Row="2">
-            <Entry Placeholder="Type a Text" Text="{Binding Message}"/>
-            <HorizontalStackLayout>
-                <Button Text="Send" Command="{Binding SendMessageCommand}"
-                        />
+        <VerticalStackLayout Grid.Row="2" HorizontalOptions="Start" Margin="{OnIdiom Watch='50,0'}">
+            <Entry Placeholder="Type a Text" Text="{Binding Message}" WidthRequest="180"
+                   TextColor="White" ReturnType="Send" ReturnCommand="{Binding SendMessageCommand}" />
+                <HorizontalStackLayout HorizontalOptions="Start">
+                <Button Text="Send" Command="{Binding SendMessageCommand}" 
+                        HorizontalOptions="Start"/>
             </HorizontalStackLayout>
         </VerticalStackLayout>
         
     </Grid>
 
+    </ScrollView>
 </ContentPage>

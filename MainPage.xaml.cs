@@ -25,7 +25,16 @@ public partial class MainPage : ContentPage
         BindingContext = vm;
         Vm = vm;
     }
-    
+
+    protected override void OnAppearing()
+    {
+        base.OnAppearing();
+
+        if (MsgColView is not null)
+        {
+            Vm.msgColView = MsgColView;
+        }
+    }
     private void OnCounterClicked(object sender, EventArgs e)
     {
         count++;
@@ -150,10 +159,13 @@ public partial class MainPage : ContentPage
         var s = (TestChat)mod.BindingContext;        
        await Vm.UpdateMessage(s.UniqueKey);
     }
+
 }
 
-public partial class ViewModel : ObservableObject, IParseLiveQueryClientCallbacks
+public partial class ViewModel : ObservableObject
 {
+    
+    public CollectionView msgColView;
     [ObservableProperty]
     ObservableCollection<TestChat> messages=new();
     [ObservableProperty]
@@ -196,100 +208,173 @@ public partial class ViewModel : ObservableObject, IParseLiveQueryClientCallback
             Debug.WriteLine(ee.Keys.FirstOrDefault());
         }
     }
-    public void OnLiveQueryClientConnected(ParseLiveQueryClient client)
-    {
-        Debug.WriteLine("Client Connected");
-    }
-
-    public void OnLiveQueryClientDisconnected(ParseLiveQueryClient client, bool userInitiated)
-    {
-        Debug.WriteLine("Client Disconnected");
-    }
-
-    public void OnLiveQueryError(ParseLiveQueryClient client, LiveQueryException reason)
-    {
-        Debug.WriteLine("Error " + reason.Message);
-    }
-
-    public void OnSocketError(ParseLiveQueryClient client, Exception reason)
-    {
-        Debug.WriteLine("Socket Error ");
-    }
     public ParseLiveQueryClient? LiveClient { get; set; }
 
-
-
+    [ObservableProperty]
+    public bool isConnected = false;
+    //I Will Just leave all this code in Docs because believe it or not, sometimes even I forget how to use my own lib :D
     void SetupLiveQuery()
     {
         try
         {
             var query = ParseClient.Instance.GetQuery("TestChat");
-            var subscription = LiveClient.Subscribe(query);
+            var subscription = LiveClient!.Subscribe(query);
 
             LiveClient.ConnectIfNeeded();
+            int retryDelaySeconds = 5;
+            int maxRetries = 10;
 
-            // Rx event streams
+
             LiveClient.OnConnected
-                .Subscribe(_ => Debug.WriteLine("LiveQuery connected."));
-            LiveClient.OnDisconnected
-                .Subscribe(info => Debug.WriteLine(info.userInitiated
-                    ? "User disconnected."
-                    : "Server disconnected."));
-            LiveClient.OnError
-                .Subscribe(ex => Debug.WriteLine("LQ Error: " + ex.Message));
-            LiveClient.OnSubscribed
-                .Subscribe(e => Debug.WriteLine("Subscribed to: " + e.requestId));
+                .Do(_ => Debug.WriteLine("LiveQuery connected."))
+                .RetryWhen(errors =>
+                    errors
+                        .Zip(Observable.Range(1, maxRetries), (error, attempt) => (error, attempt))
+                        .SelectMany(tuple =>
+                        {
+                            if (tuple.attempt > maxRetries)
+                            {
+                                Debug.WriteLine($"Max retries reached. Error: {tuple.error.Message}");
+                                return Observable.Throw<Exception>(tuple.error); // Explicit type here
+                            }
+                            IsConnected = false;
+                            Debug.WriteLine($"Retry attempt {tuple.attempt} after {retryDelaySeconds} seconds...");
 
-            // Handle object events (Create/Update/Delete)
-            LiveClient.OnObjectEvent
-                .Where(e => e.subscription == subscription)
-                
-                .Subscribe(e =>
-                {
-                    Debug.WriteLine($"Message before {Message?.Length}");
-                    TestChat chat = new();
-                    var objData = (e.objectDictionnary as Dictionary<string, object>);
-                    
-                    switch (e.evt)
+                            // Explicit reconnect call before retry delay
+                            LiveClient.ConnectIfNeeded();
+
+                            return Observable.Timer(TimeSpan.FromSeconds(retryDelaySeconds)).Select(_ => tuple.error); // Maintain compatible type
+                        })
+                )
+                .Subscribe(
+                    _ =>
                     {
-                        
-                        case Subscription.Event.Enter:
-                            Debug.WriteLine("entered");
-                            break;
-                        case Subscription.Event.Leave:
-                            Debug.WriteLine("Left");
-                            break;
-                            case Subscription.Event.Create:
-                            chat = ObjectMapper.MapFromDictionary<TestChat>(objData);
-                            Messages.Add(chat);
-                            break;
-                            case Subscription.Event.Update:
-                            chat = ObjectMapper.MapFromDictionary<TestChat>(objData);
-                            var obj = Messages.FirstOrDefault(x => x.UniqueKey == chat.UniqueKey);
-                            
-                            Messages.RemoveAt(Messages.IndexOf(obj));
-                            Messages.Add(chat);
+                        IsConnected=true;
+                        Debug.WriteLine("Reconnected successfully.");
+                    },
+                    ex => Debug.WriteLine($"Failed to reconnect: {ex.Message}")
+                );
 
-                            break;
-                            case Subscription.Event.Delete:
-                            chat = ObjectMapper.MapFromDictionary<TestChat>(objData);
-                            var objj = Messages.FirstOrDefault(x => x.UniqueKey == chat.UniqueKey);
+            LiveClient.OnError
+                .Do(ex =>
+                {
+                    Debug.WriteLine("LQ Error: " + ex.Message);
+                    LiveClient.ConnectIfNeeded(); // Ensure reconnection on errors
+                })
+                .OnErrorResumeNext(Observable.Empty<Exception>()) // Prevent breaking the stream
+                .Subscribe();
 
-                            Messages.RemoveAt(Messages.IndexOf(objj));
-                            break;
-                        default:
-                            break;
-                    }
-                    Debug.WriteLine($"Message after {Message.Length}");
-                    Debug.WriteLine($"Event {e.evt} on object {e.objectDictionnary.GetType()}");
-                });
+            LiveClient.OnDisconnected
+                .Do(info => Debug.WriteLine(info.userInitiated
+                    ? "User disconnected."
+                    : "Server disconnected."))
+                .Subscribe();
 
+
+            LiveClient.OnSubscribed
+                .Do(e => Debug.WriteLine("Subscribed to: " + e.requestId))
+                .Subscribe();
+
+            int batchSize = 3; // Number of events to release at a time
+            TimeSpan throttleTime = TimeSpan.FromMilliseconds(000);
+
+            LiveClient.OnObjectEvent
+    .Where(e => e.subscription == subscription) // Filter relevant events
+    .GroupBy(e => e.evt)
+    .SelectMany(group =>
+    {
+        if (group.Key == Subscription.Event.Create)
+        {
+            // Apply throttling only to CREATE events
+            return group.Throttle(throttleTime)
+                        .Buffer(TimeSpan.FromSeconds(1), 3) // Further control
+                        .SelectMany(batch => batch); // Flatten the batch
+        }
+        else
+        {
+            // Pass through other events without throttling
+            return group;
+        }
+    })
+    .Subscribe(e =>
+    {
+        ProcessEvent(e, Messages);
+    });
+
+
+            // Combine other potential streams
+            Observable.CombineLatest(
+                LiveClient.OnConnected.Select(_ => "Connected"),
+                LiveClient.OnDisconnected.Select(_ => "Disconnected"),
+                (connected, disconnected) => $"Status: {connected}, {disconnected}"
+            )
+            .Throttle(TimeSpan.FromSeconds(1)) // Aggregate status changes
+            .Subscribe(status => Debug.WriteLine(status));
         }
         catch (Exception ex)
         {
             Debug.WriteLine("SetupLiveQuery Error: " + ex.Message);
         }
     }
+    void ProcessEvent((Subscription.Event evt, object objectDictionnary, Subscription subscription) e,
+                  ObservableCollection<TestChat> messages)
+    {
+        var objData = e.objectDictionnary as Dictionary<string, object>;
+        TestChat chat;
+
+        switch (e.evt)
+        {
+            case Subscription.Event.Enter:
+                Debug.WriteLine("Entered");
+                break;
+
+            case Subscription.Event.Leave:
+                Debug.WriteLine("Left");
+                break;
+
+            case Subscription.Event.Create:
+                chat = ObjectMapper.MapFromDictionary<TestChat>(objData);
+                messages.Add(chat);
+
+                MainThread
+                    .BeginInvokeOnMainThread(() => msgColView.ScrollTo(chat, null, ScrollToPosition.End, true));
+                
+                break;
+
+            case Subscription.Event.Update:
+                chat = ObjectMapper.MapFromDictionary<TestChat>(objData);
+                var obj = messages.FirstOrDefault(x => x.UniqueKey == chat.UniqueKey);
+
+                if (obj != null)
+                {
+                    messages[messages.IndexOf(obj)] = chat;
+                }
+                break;
+
+            case Subscription.Event.Delete:
+                chat = ObjectMapper.MapFromDictionary<TestChat>(objData);
+                var objToDelete = messages.FirstOrDefault(x => x.UniqueKey == chat.UniqueKey);
+
+                if (objToDelete != null)
+                {
+                    messages.Remove(objToDelete);
+                }
+                if (messages.Count>1)
+                {
+                    //for some interesting reasons, if you call this when messages.count <1 it will crash/disconnect LQ subscription. (or maybe send it to another thread?)
+                    MainThread
+                        .BeginInvokeOnMainThread(() => msgColView.ScrollTo(messages.LastOrDefault(), null, ScrollToPosition.End, true));
+                }
+                break;
+
+            default:
+                Debug.WriteLine("Unhandled event type.");
+                break;
+        }
+
+        Debug.WriteLine($"Processed {e.evt} on object {objData?.GetType()}");
+    }
+
 
     [ObservableProperty]
     string? message;
@@ -306,11 +391,8 @@ public partial class ViewModel : ObservableObject, IParseLiveQueryClientCallback
         pChat["Username"] = chat.Username;
         pChat["Platform"] = chat.Platform;
         pChat["UniqueKey"] = chat.UniqueKey;
-        ParseACL acl = new();
-        acl.SetReadAccess(ParseClient.Instance.GetCurrentUser(), true); 
-        acl.SetWriteAccess(ParseClient.Instance.GetCurrentUser(), true);
         await pChat.SaveAsync();
-
+        Message = string.Empty;
     }
     public async Task UpdateMessage(string key)
     {
