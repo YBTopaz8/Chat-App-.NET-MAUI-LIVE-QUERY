@@ -5,6 +5,8 @@ VisualStudioVersion = 17.12.35521.163
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LiveQueryChatAppMAUI", "LiveQueryChatAppMAUI.csproj", "{4FA27B62-650B-45A2-95A9-5EACD5FBF9AB}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ParseLiveQuery", "..\parse-live-query-dotnetss\ParseLiveQuery\ParseLiveQuery.csproj", "{F8C23204-F7A0-4E16-8C80-A19CAB8CEB9A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -16,6 +18,10 @@ Global
 		{4FA27B62-650B-45A2-95A9-5EACD5FBF9AB}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
 		{4FA27B62-650B-45A2-95A9-5EACD5FBF9AB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4FA27B62-650B-45A2-95A9-5EACD5FBF9AB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F8C23204-F7A0-4E16-8C80-A19CAB8CEB9A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F8C23204-F7A0-4E16-8C80-A19CAB8CEB9A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F8C23204-F7A0-4E16-8C80-A19CAB8CEB9A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F8C23204-F7A0-4E16-8C80-A19CAB8CEB9A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
