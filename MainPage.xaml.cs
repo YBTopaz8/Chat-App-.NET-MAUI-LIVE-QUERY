@@ -226,6 +226,8 @@ public partial class ViewModel : ObservableObject
             {
                 await ManageUserRelationsAsync();
             }
+
+            Debug.WriteLine(s.Username);
             s.Username = "Test";
             await s.SaveAsync();
             var e = await ParseClient.Instance.CurrentUserController.GetCurrentSessionTokenAsync(ParseClient.Instance.Services);
