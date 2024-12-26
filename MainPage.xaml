@@ -15,6 +15,7 @@
                              Grid.Row="0">
             <Button Text="Quick Login" Command="{Binding LoginUserCommand}"/>
             <Button Text="Quick Login" Clicked="OnLogOut"/>
+            <Button Text="restore" Clicked="RestoreAllData"/>
             <Button Text="Connect To LiveQueries" Command="{Binding SetupLiveQueriesCommand}"/>
         </VerticalStackLayout>
         <CollectionView ItemsSource="{Binding Messages}" EmptyView="Empty" x:Name="MsgColView"

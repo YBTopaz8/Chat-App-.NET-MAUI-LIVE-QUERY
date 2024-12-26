@@ -39,7 +39,30 @@ public partial class MainPage : ContentPage
     {
         count++;
     }
+    private async void RestoreAllData(object sender, EventArgs e)
+    {
+        // For TestChat
+        TestChat chat1 = new TestChat { Msg = "Test Message 1" };
+        TestChat chat2 = new TestChat { Msg = "Test Message 2" };
+        var pchat1= ObjectMapper.ClassToDictionary(chat1);
+        var pchat2= ObjectMapper.ClassToDictionary(chat2);
+        List<object> testChats = new List<object> { pchat1, pchat2 };
 
+        
+        Dictionary<string, object> dataToRestore = new Dictionary<string, object>();
+        dataToRestore.Add("TestChat", testChats);
+        
+
+        var Links = await ParseClient.Instance.CallCloudCodeFunctionAsync<string>("restoreAllData", dataToRestore);
+        Debug.WriteLine(Links);
+    }
+
+    
+    public class GameScore 
+    { 
+        public string PlayerName { get; set; } 
+        public int Score { get; set; } 
+    }
     private void OnLogOut(object sender, EventArgs e)
     {
         ParseClient.Instance.LogOut();
@@ -152,8 +175,8 @@ public partial class MainPage : ContentPage
     private void Button_Clicked(object sender, EventArgs e)
     {
         var mod = (Button)sender;
-        var s = (TestChat)mod.BindingContext;
-        Vm.SelectedMsg = s;
+        Vm.SelectedMsg = (TestChat)mod.BindingContext;
+        
         Vm.DeleteMsg();
     }
 
@@ -161,7 +184,7 @@ public partial class MainPage : ContentPage
     {
         var mod = (Button)sender;
         var s = (TestChat)mod.BindingContext;        
-       await Vm.UpdateMessage(s.UniqueKey);
+       await Vm.UpdateMessage(s.Msg);
     }
 
 }
@@ -220,8 +243,9 @@ public partial class ViewModel : ObservableObject
         {
             //Debug.WriteLine("Login OK");
             await Shell.Current.DisplayAlert("Login", "Login OK", "OK");
-
+            
             var s = await ParseClient.Instance.GetCurrentUser();
+            return;
             if (s is not null)
             {
                 await ManageUserRelationsAsync();
@@ -818,71 +842,6 @@ public partial class ViewModel : ObservableObject
 }
 
 
-public static class ObjectMapper
-{
-    /// <summary>
-    /// Maps values from a dictionary to an instance of type T.
-    /// Logs any keys that don't match properties in T.
-    ///     
-    /// Helper to Map from Parse Dictionnary Response to Model
-    /// Example usage TestChat chat = ObjectMapper.MapFromDictionary<TestChat>(objData);    
-    /// </summary>
-    public static T MapFromDictionary<T>(IDictionary<string, object> source) where T : new()
-    {
-        // Create an instance of T
-        T target = new T();
-
-        // Get all writable properties of T
-        var properties = typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance)
-            .Where(p => p.CanWrite)
-            .ToDictionary(p => p.Name, p => p, StringComparer.OrdinalIgnoreCase);
-
-        // Track unmatched keys
-        List<string> unmatchedKeys = new();
-
-        foreach (var kvp in source)
-        {
-            if (properties.TryGetValue(kvp.Key, out var property))
-            {
-                try
-                {
-                    // Convert and assign the value to the property
-                    if (kvp.Value != null && property.PropertyType.IsAssignableFrom(kvp.Value.GetType()))
-                    {
-                        property.SetValue(target, kvp.Value);
-                    }
-                    else if (kvp.Value != null)
-                    {
-                        // Attempt conversion for non-directly assignable types
-                        var convertedValue = Convert.ChangeType(kvp.Value, property.PropertyType);
-                        property.SetValue(target, convertedValue);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"Failed to set property {property.Name}: {ex.Message}");
-                }
-            }
-            else
-            {
-                // Log unmatched keys
-                unmatchedKeys.Add(kvp.Key);
-            }
-        }
-
-        // Log keys that don't match
-        if (unmatchedKeys.Count > 0)
-        {
-            Debug.WriteLine("Unmatched Keys:");
-            foreach (var key in unmatchedKeys)
-            {
-                Debug.WriteLine($"- {key}");
-            }
-        }
-
-        return target;
-    }
-}
 
 [ParseClassName("Post")]
 public class Post : ParseObject
