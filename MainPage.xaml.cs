@@ -232,9 +232,7 @@ public partial class ViewModel : ObservableObject
        
         ParseUser signUpUser = new ParseUser();
         //signUpUser.Username = CurrentUserLocal.UserName;
-        signUpUser.Email = "8brunel@gmail.com";
-        signUpUser.Username = "YBTopaz8";
-        signUpUser.Password = "Yvan";
+        
         //signUpUser.Password = CurrentUserLocal.UserPassword;
         var usr = await ParseClient.Instance.LogInWithAsync(signUpUser.Email, signUpUser.Password!);
 
@@ -245,22 +243,22 @@ public partial class ViewModel : ObservableObject
             await Shell.Current.DisplayAlert("Login", "Login OK", "OK");
             
             var s = await ParseClient.Instance.GetCurrentUser();
-            return;
+            
             if (s is not null)
             {
                 await ManageUserRelationsAsync();
             }
 
-            Debug.WriteLine(s.Username);
-            s.Username = "Test";
-            await s.SaveAsync();
-            var e = await ParseClient.Instance.CurrentUserController.GetCurrentSessionTokenAsync(ParseClient.Instance.Services);
-            Debug.WriteLine(e);
-            var ee = await ParseClient.Instance.GetCurrentSessionAsync();
+            //    Debug.WriteLine(s.Username);
+            //    s.Username = "Test";
+            //    await s.SaveAsync();
+            //    var e = await ParseClient.Instance.CurrentUserController.GetCurrentSessionTokenAsync(ParseClient.Instance.Services);
+            //    Debug.WriteLine(e);
+            //    var ee = await ParseClient.Instance.GetCurrentSessionAsync();
 
-            Debug.WriteLine(ee.SessionToken);
-            Debug.WriteLine(ee.ObjectId);
-            Debug.WriteLine(ee.Keys.FirstOrDefault());
+            //    Debug.WriteLine(ee.SessionToken);
+            //    Debug.WriteLine(ee.ObjectId);
+            //    Debug.WriteLine(ee.Keys.FirstOrDefault());
         }
     }
     public static async Task AddRelationToUserAsync(ParseUser user, string relationField, IList<ParseObject> relatedObjects)
@@ -368,8 +366,8 @@ public partial class ViewModel : ObservableObject
         // Create related objects to add
         var relatedObjectsToAdd = new List<ParseObject>
     {
-        new ParseObject("Friend") { ["name"] = "Alice" },
-        new ParseObject("Friend") { ["name"] = "Bob" }
+        new ParseObject("Friend") { ["name"] = "YB" },
+        new ParseObject("Friend") { ["name"] = "Topaz" }
     };
 
         // Save related objects to the server before adding to the relation
@@ -399,7 +397,7 @@ public partial class ViewModel : ObservableObject
         await UpdateUserRelationAsync(user, relationField, newObjectsToAdd, relatedObjectsToRemove);
 
         // Delete the relation
-        await DeleteUserRelationAsync(user, relationField);
+        //await DeleteUserRelationAsync(user, relationField);
     }
     public static async Task<IList<ParseObject>> GetUserRelationsAsync(ParseUser user, string relationField)
     {
