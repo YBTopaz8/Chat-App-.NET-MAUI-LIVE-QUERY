@@ -2,8 +2,12 @@
 
 Demo Repo to show how to have simple chat app in .NET MAUI with live queries in PARSE SDK for .NET
 
-Parse Live Query Nuget: [![Nuget](https://img.shields.io/nuget/v/yb.parselivequerydotnet.svg)](https://www.nuget.org/packages/YB.ParseLiveQueryDotNet)
+## Parse Live Query Nuget: [![Nuget](https://img.shields.io/nuget/v/yb.parselivequerydotnet.svg)](https://www.nuget.org/packages/YB.ParseLiveQueryDotNet)
 
+
+## Parse Live Queries [Repo](https://github.com/YBTopaz8/Parse-LiveQueries-DOTNET)
+
+## Parse Live Queries [Wiki](https://github.com/YBTopaz8/Parse-LiveQueries-DOTNET/wiki)
 You can view a demo here
 
 
