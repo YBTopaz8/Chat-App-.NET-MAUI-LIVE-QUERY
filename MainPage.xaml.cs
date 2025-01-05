@@ -231,10 +231,8 @@ public partial class ViewModel : ObservableObject
         
        
         ParseUser signUpUser = new ParseUser();
-        //signUpUser.Username = CurrentUserLocal.UserName;
-        
-        //signUpUser.Password = CurrentUserLocal.UserPassword;
-        var usr = await ParseClient.Instance.LogInWithAsync(signUpUser.Email, signUpUser.Password!);
+        //ADD YOUR USERNAME AND PASSWORD HERE
+        var usr = await ParseClient.Instance.LogInWithAsync(signUpUser.Username, signUpUser.Password!);
 
 
         if (usr is not null)
@@ -633,7 +631,6 @@ public partial class ViewModel : ObservableObject
             Debug.WriteLine($"Error updating message: {ex.Message}");
         }
     }
-
     [RelayCommand]
     public async void DeleteMsg()
     {

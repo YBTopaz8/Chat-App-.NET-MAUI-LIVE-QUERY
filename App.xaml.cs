@@ -55,12 +55,12 @@ public partial class App : Application
 
             }
             );
-            HostManifestData manifest = new HostManifestData()
-            {
-                Version = "1.0.0",
-                Identifier = "com.yvanbrunel.flowhub",
-                Name = "Flowhub",
-            };
+            //HostManifestData manifest = new HostManifestData()
+            //{
+            //    Version = "1.0.0",
+            //    Identifier = "com.yvanbrunel.flowhub",
+            //    Name = "Flowhub",
+            //};
 
             client.Publicize();
 
