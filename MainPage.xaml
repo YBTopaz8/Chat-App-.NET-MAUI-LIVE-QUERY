@@ -24,12 +24,12 @@
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="local:TestChat">
                     <VerticalStackLayout Margin="20,0">
-                            <Label Text="{Binding Msg}" TextColor="White" FontSize="12"/>
-                            <Label Text="{Binding Platform, StringFormat='Sent via {0}'}" FontSize="12"
-                                   TextColor="{OnIdiom Watch=Purple, Desktop=Blue, Phone=Orange}"/>
-                            <Button Text="Edit" CommandParameter="{Binding .}" HorizontalOptions="Start"
-                                WidthRequest="250" Clicked="Button_Clicked_1" FontSize="12" HeightRequest="35"
-                                    BackgroundColor="Transparent" TextColor="White"/>
+                        <Label Text="{Binding Msg}" TextColor="White" FontSize="12"/>
+                        <Label Text="{Binding Platform, StringFormat='Sent via {0}'}" FontSize="12"
+                                TextColor="{OnIdiom Watch=Purple, Desktop=Blue, Phone=Orange}"/>
+                        <Button Text="Edit" CommandParameter="{Binding .}" HorizontalOptions="Start"
+                            WidthRequest="250" Clicked="Button_Clicked_1" FontSize="12" HeightRequest="35"
+                                BackgroundColor="Transparent" TextColor="White"/>
                         <Button Text="Delete" WidthRequest="250" Clicked="Button_Clicked" 
                                 HorizontalOptions="Start" FontSize="12" HeightRequest="35"
                                 BackgroundColor="Transparent" TextColor="Red"

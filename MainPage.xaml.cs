@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using Parse.LiveQuery;
+
 using Parse;
 using Parse.Abstractions.Platform.Objects;
 using Parse.Abstractions.Internal;
@@ -43,10 +44,11 @@ public partial class MainPage : ContentPage
     {
         // For TestChat
         TestChat chat1 = new TestChat { Msg = "Test Message 1" };
-        TestChat chat2 = new TestChat { Msg = "Test Message 2" };
-        var pchat1= ObjectMapper.ClassToDictionary(chat1);
-        var pchat2= ObjectMapper.ClassToDictionary(chat2);
-        List<object> testChats = new List<object> { pchat1, pchat2 };
+        //TestChat chat2 = new TestChat { Msg = "Test Message 2" };
+        //var pchat1= ParseLiveQueryClient.ObjectMapper.ClassToDictionary(chat1);
+        //var pchat2= ParseLiveQueryClient.ObjectMapper.ClassToDictionary(chat2);
+        List<object> testChats = new List<object> { chat1 };
+        //List<object> testChats = new List<object> { pchat1, pchat2 };
 
         
         Dictionary<string, object> dataToRestore = new Dictionary<string, object>();
@@ -184,7 +186,7 @@ public partial class MainPage : ContentPage
     {
         var mod = (Button)sender;
         var s = (TestChat)mod.BindingContext;        
-       await Vm.UpdateMessage(s.Msg);
+       await Vm.UpdateMessage(s.UniqueKey);
     }
 
 }
@@ -232,13 +234,25 @@ public partial class ViewModel : ObservableObject
        
         ParseUser signUpUser = new ParseUser();
         //ADD YOUR USERNAME AND PASSWORD HERE
+
+        signUpUser.Username = "Yvan";
+        signUpUser.Password = "1234";
+        /*
+        var user = await ParseClient.Instance.SignUpWithAsync(signUpUser.Username, signUpUser.Password!);
+
+        if (user is not null)
+        {
+            //Debug.WriteLine("Sign Up OK");
+            await Shell.Current.DisplayAlert("Sign Up", "Sign Up OK", "OK");
+        }
+*/
         var usr = await ParseClient.Instance.LogInWithAsync(signUpUser.Username, signUpUser.Password!);
 
 
         if (usr is not null)
         {
             //Debug.WriteLine("Login OK");
-            await Shell.Current.DisplayAlert("Login", "Login OK", "OK");
+            //await Shell.Current.DisplayAlert("Login", "Login OK", "OK");
             
             var s = await ParseClient.Instance.GetCurrentUser();
             
@@ -262,14 +276,10 @@ public partial class ViewModel : ObservableObject
     public static async Task AddRelationToUserAsync(ParseUser user, string relationField, IList<ParseObject> relatedObjects)
     {
         if (user == null)
-        {
             throw new ArgumentNullException(nameof(user), "User must not be null.");
-        }
 
         if (string.IsNullOrEmpty(relationField))
-        {
             throw new ArgumentException("Relation field must not be null or empty.", nameof(relationField));
-        }
 
         if (relatedObjects == null || relatedObjects.Count == 0)
         {
@@ -277,16 +287,25 @@ public partial class ViewModel : ObservableObject
             return;
         }
 
-        var relation = user.GetRelation<ParseObject>(relationField);
+        // Ensure each related object is saved so it has an ObjectId.
+        foreach (var obj in relatedObjects)
+        {
+            if (string.IsNullOrEmpty(obj.ObjectId))
+            {
+                await obj.SaveAsync();
+            }
+        }
 
+        var relation = user.GetRelation<ParseObject>(relationField);
         foreach (var obj in relatedObjects)
         {
             relation.Add(obj);
         }
-
+        
         await user.SaveAsync();
         Debug.WriteLine($"Added {relatedObjects.Count} objects to the '{relationField}' relation for user '{user.Username}'.");
     }
+
     public static async Task UpdateUserRelationAsync(ParseUser user, string relationField, IList<ParseObject> toAdd, IList<ParseObject> toRemove)
     {
         if (user == null)
@@ -359,7 +378,7 @@ public partial class ViewModel : ObservableObject
             return;
         }
 
-        const string relationField = "friends"; // Example relation field name
+        const string relationField = "Friends"; // Example relation field name
 
         // Create related objects to add
         var relatedObjectsToAdd = new List<ParseObject>
@@ -395,9 +414,9 @@ public partial class ViewModel : ObservableObject
         await UpdateUserRelationAsync(user, relationField, newObjectsToAdd, relatedObjectsToRemove);
 
         // Delete the relation
-        //await DeleteUserRelationAsync(user, relationField);
+        await DeleteUserRelationAsync(user, relationField);
     }
-    public static async Task<IList<ParseObject>> GetUserRelationsAsync(ParseUser user, string relationField)
+    public static async Task<List<ParseObject>> GetUserRelationsAsync(ParseUser user, string relationField)
     {
         if (user == null)
         {
@@ -421,13 +440,14 @@ public partial class ViewModel : ObservableObject
     [ObservableProperty]
     public bool isConnected = false;
     //I Will Just leave all this code in Docs because believe it or not, sometimes even I forget how to use my own lib :D
+    
     void SetupLiveQuery()
     {
         try
         {    
             var query = ParseClient.Instance.GetQuery("TestChat");
             var subscription = LiveClient!.Subscribe(query);
-
+            
             LiveClient.ConnectIfNeeded();
             int retryDelaySeconds = 5;
             int maxRetries = 10;
@@ -508,7 +528,7 @@ public partial class ViewModel : ObservableObject
             {
                 ProcessEvent(e, Messages);
             });
-
+            
 
             // Combine other potential streams
             Observable.CombineLatest(
@@ -527,6 +547,7 @@ public partial class ViewModel : ObservableObject
     void ProcessEvent((Subscription.Event evt, object objectDictionnary, Subscription subscription) e,
                   ObservableCollection<TestChat> messages)
     {
+        
         var objData = e.objectDictionnary as Dictionary<string, object>;
         TestChat chat;
 
@@ -541,6 +562,7 @@ public partial class ViewModel : ObservableObject
                 break;
 
             case Subscription.Event.Create:
+                
                 chat = ObjectMapper.MapFromDictionary<TestChat>(objData);
                 messages.Add(chat);
 
@@ -570,8 +592,7 @@ public partial class ViewModel : ObservableObject
                 if (messages.Count>1)
                 {
                     //for some interesting reasons, if you call this when messages.count <1 it will crash/disconnect LQ subscription. (or maybe send it to another thread?)
-                    MainThread
-                        .BeginInvokeOnMainThread(() => msgColView.ScrollTo(messages.LastOrDefault(), null, ScrollToPosition.End, true));
+                    MainThread.BeginInvokeOnMainThread(() => msgColView.ScrollTo(messages.LastOrDefault(), null, ScrollToPosition.End, true));
                 }
                 break;
 
@@ -582,7 +603,7 @@ public partial class ViewModel : ObservableObject
 
         Debug.WriteLine($"Processed {e.evt} on object {objData?.GetType()}");
     }
-
+    
 
     [ObservableProperty]
     string? message;
@@ -609,8 +630,7 @@ public partial class ViewModel : ObservableObject
             // Step 1: Query the existing object by a unique identifier (e.g., Username, Msg)
             var query = ParseClient.Instance.GetQuery("TestChat")
                 .WhereEqualTo("UniqueKey",key ); // Filter condition
-                
-
+            
             var existingChat = await query.FirstAsync(); // Fetch the first matching object
 
             // Step 2: Update the properties of the fetched object
@@ -646,6 +666,8 @@ public partial class ViewModel : ObservableObject
 
         //Heads up. handling cross device deletion is tricky. Make sure BOTH devices produce the same UniqueKey (or similar) and that both will that data when they create/update.
     }
+
+
     private static async Task CreatePostWithComments()
     {
         // Create a new Post
