@@ -12,6 +12,7 @@ public partial class App : Application
 
         InitializeComponent();
         InitializeParseClient();
+        ParseClient.Instance.RegisterSubclass(typeof(TestChat));
     }
     private void CurrentDomain_FirstChanceException(object? sender, System.Runtime.ExceptionServices.FirstChanceExceptionEventArgs e)
     {

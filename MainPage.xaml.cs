@@ -1,16 +1,13 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using System.Collections.ObjectModel;
-using System.ComponentModel;
-using System.Diagnostics;
-using Parse.LiveQuery;
-
 using Parse;
-using Parse.Abstractions.Platform.Objects;
 using Parse.Abstractions.Internal;
 using Parse.Infrastructure;
+using Parse.LiveQuery;
+using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Reactive.Linq;
-using System.Reflection;
+using System.Threading.Tasks;
 
 namespace LiveQueryChatAppMAUI;
 
@@ -43,7 +40,8 @@ public partial class MainPage : ContentPage
     private async void RestoreAllData(object sender, EventArgs e)
     {
         // For TestChat
-        TestChat chat1 = new TestChat { Msg = "Test Message 1" };
+        TestChat chat1 = new TestChat ();
+
         //TestChat chat2 = new TestChat { Msg = "Test Message 2" };
         //var pchat1= ParseLiveQueryClient.ObjectMapper.ClassToDictionary(chat1);
         //var pchat2= ParseLiveQueryClient.ObjectMapper.ClassToDictionary(chat2);
@@ -186,23 +184,39 @@ public partial class MainPage : ContentPage
     {
         var mod = (Button)sender;
         var s = (TestChat)mod.BindingContext;        
-       await Vm.UpdateMessage(s.UniqueKey);
+       await Vm.UpdateMessage(s);
     }
 
 }
 
-public partial class TestChat : ObservableObject
+[ParseClassName("TestChat")]
+public partial class TestChat : ParseObject
 {
-    [ObservableProperty]
-    string uniqueKey = Guid.NewGuid().ToString();
-    [ObservableProperty]
-    string? msg;
-    [ObservableProperty]
-    string? username;
-    [ObservableProperty]
-    string platform = $"{DeviceInfo.Platform.ToString()} version {DeviceInfo.VersionString}";
-    [ObservableProperty]
-    bool isDeleted;
+
+    [ParseFieldName("Msg")]
+
+    public string? Msg // Nullable string
+    {
+        get => Get<string?>(nameof(Msg)); // Get<string> will often return null if not set
+        set => Set(nameof(Msg), value);
+    }
+
+    [ParseFieldName("Username")]
+
+    public string? Username // Nullable string
+    {
+        get => Get<string?>(nameof(Username));
+        set => Set(nameof(Username), value);
+    }
+
+
+    [ParseFieldName("IsDeleted")]
+
+    public bool IsDeleted
+    {
+        get => Get<bool>(nameof(IsDeleted)); // Booleans default to false if not set in Parse
+        set => Set(nameof(IsDeleted), value);
+    }
 }
 
 
@@ -222,10 +236,10 @@ public partial class ViewModel : ObservableObject
 
     }
     [RelayCommand]
-    void SetupLiveQueries()
+    async Task SetupLiveQueries()
     {
         LiveClient = new ParseLiveQueryClient();
-        SetupLiveQuery();
+        await SetupLiveQuery();
     }
     [RelayCommand]
     public async Task LoginUser()
@@ -441,14 +455,14 @@ public partial class ViewModel : ObservableObject
     public bool isConnected = false;
     //I Will Just leave all this code in Docs because believe it or not, sometimes even I forget how to use my own lib :D
     
-    void SetupLiveQuery()
+    async Task SetupLiveQuery()
     {
         try
         {    
-            var query = ParseClient.Instance.GetQuery("TestChat");
-            var subscription = LiveClient!.Subscribe(query);
+            var query = ParseClient.Instance.GetQuery<TestChat>();
+            var subscription = await LiveClient!.Subscribe(query);
             
-            LiveClient.ConnectIfNeeded();
+            await LiveClient.ConnectIfNeededAsync();
             int retryDelaySeconds = 5;
             int maxRetries = 10;
 
@@ -457,7 +471,7 @@ public partial class ViewModel : ObservableObject
                 .RetryWhen(errors =>
                     errors
                         .Zip(Observable.Range(1, maxRetries), (error, attempt) => (error, attempt))
-                        .SelectMany(tuple =>
+                        .SelectMany(async tuple =>
                         {
                             if (tuple.attempt > maxRetries)
                             {
@@ -468,7 +482,7 @@ public partial class ViewModel : ObservableObject
                             Debug.WriteLine($"Retry attempt {tuple.attempt} after {retryDelaySeconds} seconds...");
 
                             // Explicit reconnect call before retry delay
-                            LiveClient.ConnectIfNeeded(); // revive app!
+                            await LiveClient.ConnectIfNeededAsync(); // revive app!
 
                             return Observable.Timer(TimeSpan.FromSeconds(retryDelaySeconds)).Select(_ => tuple.error); // Maintain compatible type
                         })
@@ -483,10 +497,10 @@ public partial class ViewModel : ObservableObject
                 );
 
             LiveClient.OnError
-                .Do(ex =>
+                .Do(async ex =>
                 {
                     Debug.WriteLine("LQ Error: " + ex.Message);
-                    LiveClient.ConnectIfNeeded();  // Ensure reconnection on errors
+                   await LiveClient.ConnectIfNeededAsync();  // Ensure reconnection on errors
                 })
                 .OnErrorResumeNext(Observable.Empty<Exception>()) // Prevent breaking the stream
                 .Subscribe();
@@ -573,8 +587,7 @@ public partial class ViewModel : ObservableObject
 
             case Subscription.Event.Update:
                 chat = ObjectMapper.MapFromDictionary<TestChat>(objData);
-                var obj = messages.FirstOrDefault(x => x.UniqueKey == chat.UniqueKey);
-
+                var obj = messages.FirstOrDefault(x => x.ObjectId == chat.ObjectId);                
                 if (obj != null)
                 {
                     messages[messages.IndexOf(obj)] = chat;
@@ -583,7 +596,7 @@ public partial class ViewModel : ObservableObject
 
             case Subscription.Event.Delete:
                 chat = ObjectMapper.MapFromDictionary<TestChat>(objData);
-                var objToDelete = messages.FirstOrDefault(x => x.UniqueKey == chat.UniqueKey);
+                var objToDelete = messages.FirstOrDefault(x => x.ObjectId == chat.ObjectId);
 
                 if (objToDelete != null)
                 {
@@ -615,26 +628,23 @@ public partial class ViewModel : ObservableObject
         TestChat chat = new();
         chat.Msg = Message;
         chat.Username = "YBTopaz8";
-        var pChat = new ParseObject("TestChat");
-        pChat["Msg"] = chat.Msg;
-        pChat["Username"] = chat.Username;
-        pChat["Platform"] = chat.Platform;
-        pChat["UniqueKey"] = chat.UniqueKey;
-        await pChat.SaveAsync();
+        
+        await chat.SaveAsync();
         Message = string.Empty;
     }
-    public async Task UpdateMessage(string key)
+    public async Task UpdateMessage(TestChat key)
     {
         try
         {
             // Step 1: Query the existing object by a unique identifier (e.g., Username, Msg)
-            var query = ParseClient.Instance.GetQuery("TestChat")
-                .WhereEqualTo("UniqueKey",key ); // Filter condition
+            var query = await ParseClient.Instance.GetQuery<TestChat>()
+                .WhereEqualTo("objectId",key.ObjectId )
+                .FirstAsync(); 
             
-            var existingChat = await query.FirstAsync(); // Fetch the first matching object
+            TestChat? existingChat = await query.FirstAsync(); // Fetch the first matching object
 
             // Step 2: Update the properties of the fetched object
-            existingChat["Msg"] = "NowYB"; // Update message or other properties as needed
+            existingChat.Msg = "NowYB"; // Update message or other properties as needed
 
             
             // Step 3: Save the updated object back to the server
@@ -652,13 +662,13 @@ public partial class ViewModel : ObservableObject
         }
     }
     [RelayCommand]
-    public async void DeleteMsg()
+    public async Task DeleteMsg()
     {
         SelectedMsg.IsDeleted = true;
         // Step 1: Query the existing object by a unique identifier (e.g., Username, Msg)
-        var query = ParseClient.Instance.GetQuery("TestChat")
-            .WhereEqualTo("UniqueKey", SelectedMsg.UniqueKey); // Filter condition 
-        var pChat = await query.FirstOrDefaultAsync();
+        var query = ParseClient.Instance.GetQuery<TestChat>()
+            .WhereEqualTo("ObjectId", SelectedMsg.ObjectId); // Filter condition 
+        TestChat? pChat = await query.FirstOrDefaultAsync();
         if (pChat is not null)
         {
             _ = pChat.DeleteAsync();
