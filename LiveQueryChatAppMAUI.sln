@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LiveQueryChatAppMAUI", "Liv
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ParseLiveQuery", "..\parse-live-query-dotnetss\ParseLiveQuery\ParseLiveQuery.csproj", "{A6687AB5-9AA8-40B4-9862-CEEDA7AD3A4C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "YBSeedrClient", "..\YBSeedrClient\YBSeedrClient.csproj", "{F782BE7C-48B1-1AE8-D7E3-DBFE30FA5800}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -22,8 +24,15 @@ Global
 		{A6687AB5-9AA8-40B4-9862-CEEDA7AD3A4C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A6687AB5-9AA8-40B4-9862-CEEDA7AD3A4C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A6687AB5-9AA8-40B4-9862-CEEDA7AD3A4C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F782BE7C-48B1-1AE8-D7E3-DBFE30FA5800}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F782BE7C-48B1-1AE8-D7E3-DBFE30FA5800}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F782BE7C-48B1-1AE8-D7E3-DBFE30FA5800}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F782BE7C-48B1-1AE8-D7E3-DBFE30FA5800}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {FAD8D5E5-5E73-4983-BBE8-458BCC73E95B}
 	EndGlobalSection
 EndGlobal

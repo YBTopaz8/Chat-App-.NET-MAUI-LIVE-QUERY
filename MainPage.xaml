@@ -1,53 +1,193 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
-<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             x:Class="LiveQueryChatAppMAUI.MainPage"
-             xmlns:local="clr-namespace:LiveQueryChatAppMAUI"
-             x:DataType="local:ViewModel"
-             x:Name="myPage"
-             Title="{Binding Messages.Count,StringFormat='{0} Msgs'}">
+<ContentPage
+    x:Class="LiveQueryChatAppMAUI.MainPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:Vm="clr-namespace:LiveQueryChatAppMAUI.ViewModel"
+    xmlns:local="clr-namespace:LiveQueryChatAppMAUI"
+    xmlns:seedrModels="clr-namespace:YBSeedrClient.Models;assembly=YBSeedrClient"
+    xmlns:syncf="http://schemas.syncfusion.com/maui/toolkit"
+    xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+    x:Name="myPage"
+    x:DataType="Vm:HomePageViewModel">
+    <Shell.TitleView>
+        <HorizontalStackLayout Margin="10">
+            <Label FontSize="34" Text="Welcome Back YBTopaz8!" />
 
-    <ScrollView>
-        
-    <Grid RowDefinitions="Auto,*,*" HorizontalOptions="Start"
-          BackgroundColor="#1E1E1E">
-        <VerticalStackLayout Padding="30,0" Spacing="25"
-                             Grid.Row="0">
-            <Button Text="Quick Login" Command="{Binding LoginUserCommand}"/>
-            <Button Text="Quick Login" Clicked="OnLogOut"/>
-            <Button Text="restore" Clicked="RestoreAllData"/>
-            <Button Text="Connect To LiveQueries" Command="{Binding SetupLiveQueriesCommand}"/>
-        </VerticalStackLayout>
-        <CollectionView ItemsSource="{Binding Messages}" EmptyView="Empty" x:Name="MsgColView"
-                        
-                        Grid.Row="1"  >
+            <Button Command="{Binding InitializeCommand}" Text="Refresh Folders" />
+        </HorizontalStackLayout>
+    </Shell.TitleView>
+    <Grid
+        ColumnDefinitions="*"
+        RowDefinitions="auto,*,auto"
+        RowSpacing="15">
+
+        <Grid
+            Grid.Row="2"
+            Grid.Column="0"
+            BackgroundColor="Black"
+            ColumnDefinitions="*,auto"
+            RowDefinitions="auto,*">
+
+
+            <Editor
+                x:Name="LinkEditor"
+                Grid.Column="0"
+                Focused="LinkEditor_Focused"
+                TextChanged="LinkEditor_TextChanged"
+                Unfocused="LinkEditor_Unfocused" />
+
+            <HorizontalStackLayout Grid.Column="1">
+                <Button
+                    BackgroundColor="DarkSlateBlue"
+                    Command="{Binding AddMagnetCommand}"
+                    CommandParameter="{Binding Text, Source={x:Reference LinkEditor}}"
+                    Text="Add"
+                    TextColor="White" />
+            </HorizontalStackLayout>
+        </Grid>
+
+        <CollectionView
+            Grid.Row="0"
+            Grid.Column="0"
+            BackgroundColor="Transparent"
+            Header="Main Folder"
+            ItemsSource="{Binding RootFolder.Folders}">
             <CollectionView.ItemTemplate>
-                <DataTemplate x:DataType="local:TestChat">
+                <DataTemplate x:DataType="seedrModels:SeedrFolderItem">
+                    <Border
+                        Padding="20"
+                        BackgroundColor="Transparent"
+                        StrokeShape="RoundRectangle 20"
+                        StrokeThickness="0.4">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer
+                                x:Name="TapGest"
+                                CommandParameter="{Binding .}"
+                                NumberOfTapsRequired="1"
+                                Tapped="TapGest_Tapped" />
 
-                        <VerticalStackLayout Margin="20,0">
-                            <Label Text="{Binding Msg}" TextColor="White" FontSize="12"/>                            
-                            <Button Text="Edit" CommandParameter="{Binding .}" HorizontalOptions="Start"
-                             Clicked="Button_Clicked_1" FontSize="12" HeightRequest="35"
-                                BackgroundColor="Transparent" TextColor="White"/>
-                            <Button Text="Delete" Clicked="Button_Clicked" 
-                                HorizontalOptions="Start" FontSize="12" HeightRequest="35"
-                                BackgroundColor="Transparent" TextColor="Red"
-                                CommandParameter="{Binding .}"/>
-                        </VerticalStackLayout>
-                    </DataTemplate>
+                        </Border.GestureRecognizers>
+                        <Grid BackgroundColor="Transparent" ColumnDefinitions="0.1*,*,*,*">
+                            <CheckBox
+                                x:Name="SelectedCheckBox"
+                                Grid.Column="0"
+                                CheckedChanged="SelectedCheckBox_CheckedChanged" />
+                            <Label
+                                Grid.Column="1"
+                                Text="{Binding Name}"
+                                TextColor="White"
+                                VerticalTextAlignment="Center" />
+                            <Label
+                                Grid.Column="2"
+                                Text="{Binding Size}"
+                                TextColor="Grey"
+                                VerticalTextAlignment="Center" />
+                            <Label
+                                Grid.Column="3"
+                                Text="{Binding LastUpdate}"
+                                TextColor="Grey"
+                                VerticalTextAlignment="Center" />
+                        </Grid>
+                    </Border>
+                    <!--</syncf:SfEffectsView>-->
+                </DataTemplate>
             </CollectionView.ItemTemplate>
         </CollectionView>
 
-        <VerticalStackLayout Grid.Row="2" Margin="{OnIdiom Watch='50,0'}">
-            <Entry Placeholder="Type a Text" Text="{Binding Message}" 
-                   TextColor="White" ReturnType="Send" ReturnCommand="{Binding SendMessageCommand}" />
-                <HorizontalStackLayout >
-                <Button Text="Send" Command="{Binding SendMessageCommand}" 
-                        />
-            </HorizontalStackLayout>
-        </VerticalStackLayout>
-        
-    </Grid>
+        <Grid
+            Grid.Row="1"
+            ColumnDefinitions="*,*"
+            ColumnSpacing="10">
 
-    </ScrollView>
+            <CollectionView
+                Grid.Column="0"
+                BackgroundColor="Transparent"
+                Header="{Binding CurrentFolder.Name, StringFormat='Folders in {0}'}"
+                ItemsSource="{Binding RootFolder.Folders}">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="seedrModels:SeedrFolderItem">
+                        <Border
+                            Padding="5"
+                            BackgroundColor="Transparent"
+                            StrokeShape="RoundRectangle 20"
+                            StrokeThickness="0.4">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer
+                                    x:Name="TapGest"
+                                    CommandParameter="{Binding .}"
+                                    NumberOfTapsRequired="1"
+                                    Tapped="TapGest_Tapped" />
+
+                            </Border.GestureRecognizers>
+                            <Grid BackgroundColor="Transparent" ColumnDefinitions="0.1*,*,*,*">
+                                <CheckBox
+                                    x:Name="SelectedCheckBox"
+                                    Grid.Column="0"
+                                    CheckedChanged="SelectedCheckBox_CheckedChanged" />
+                                <Label
+                                    Grid.Column="1"
+                                    Text="{Binding Name}"
+                                    TextColor="White"
+                                    VerticalTextAlignment="Center" />
+                                <Label
+                                    Grid.Column="2"
+                                    Text="{Binding Size}"
+                                    TextColor="Grey"
+                                    VerticalTextAlignment="Center" />
+                                <Label
+                                    Grid.Column="3"
+                                    Text="{Binding LastUpdate}"
+                                    TextColor="Grey"
+                                    VerticalTextAlignment="Center" />
+                            </Grid>
+                        </Border>
+                        <!--</syncf:SfEffectsView>-->
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+            <CollectionView
+                Grid.Column="1"
+                BackgroundColor="Transparent"
+                Header="{Binding CurrentFolder.Name, StringFormat='Files  in {0}'}"
+                ItemsSource="{Binding CurrentFiles}">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="seedrModels:SeedrFileItem">
+                        <Border StrokeShape="RoundRectangle 20" StrokeThickness="0.4">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer
+                                    x:Name="FileTapGest"
+                                    CommandParameter="{Binding .}"
+                                    NumberOfTapsRequired="1"
+                                    Tapped="FileTapGest_Tapped" />
+
+                            </Border.GestureRecognizers>
+                            <Grid BackgroundColor="Transparent" ColumnDefinitions="0.1*,*,*,*">
+                                <CheckBox
+                                    x:Name="SelectedCheckBox"
+                                    Grid.Column="0"
+                                    CheckedChanged="SelectedCheckBox_CheckedChanged" />
+                                <Label
+                                    Grid.Column="1"
+                                    Text="{Binding Name}"
+                                    TextColor="White"
+                                    VerticalTextAlignment="Center" />
+                                <Label
+                                    Grid.Column="2"
+                                    Text="{Binding Size}"
+                                    TextColor="Grey"
+                                    VerticalTextAlignment="Center" />
+                                <Label
+                                    Grid.Column="3"
+                                    Text="{Binding LastUpdate}"
+                                    TextColor="Grey"
+                                    VerticalTextAlignment="Center" />
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </Grid>
+
+    </Grid>
 </ContentPage>
