@@ -1,4 +1,5 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+﻿global using YBSeedrClient.SeedrModels;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using LiveQueryChatAppMAUI.ViewModel;
 using Syncfusion.Maui.Toolkit.EffectsView;
@@ -17,7 +18,6 @@ namespace LiveQueryChatAppMAUI;
 
 public partial class MainPage : ContentPage
 {
-    int count = 0;
 
     public HomePageViewModel Vm { get; }
 

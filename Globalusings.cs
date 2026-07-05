@@ -10,6 +10,5 @@ global using YBSeedrClient.Abstractions;
 
 global using Microsoft.Extensions.Logging;
 global using Microsoft.Extensions.Logging.Abstractions;
-global using YBSeedrClient.Models;
 
 

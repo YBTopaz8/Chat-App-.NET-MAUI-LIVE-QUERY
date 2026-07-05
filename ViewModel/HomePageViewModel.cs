@@ -10,7 +10,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using YBSeedrClient;
-using static YBSeedrClient.SeedrModels;
+
 namespace LiveQueryChatAppMAUI.ViewModel;
 /// <summary>
 /// The home page view model.
@@ -35,19 +35,19 @@ public partial class HomePageViewModel : ObservableObject
     /// Gets or sets the current folder.
     /// </summary>
     [ObservableProperty]
-    public partial FolderContent CurrentFolder { get; set; }
+    public partial FolderContent? CurrentFolder { get; set; }
     [ObservableProperty]
     public partial FolderContent RootFolder { get; set; }
     /// <summary>
     /// Gets or sets the current files.
     /// </summary>
     [ObservableProperty]
-    public partial ObservableCollection<SeedrFileItem> CurrentFiles { get; set; }
+    public partial ObservableCollection<SeedrFileItem?>? CurrentFiles { get; set; }
     /// <summary>
     /// Gets or sets the current folders.
     /// </summary>
     [ObservableProperty]
-    public partial ObservableCollection<SeedrFolderItem> CurrentFolders { get; set; }
+    public partial ObservableCollection<SeedrFolderItem>? CurrentFolders { get; set; }
     /// <summary>
     /// Gets the current seedr user.
     /// </summary>
@@ -99,8 +99,11 @@ public partial class HomePageViewModel : ObservableObject
 
         _logger.LogInformation("Fetching root folder contents...");
         RootFolder = await _seedrService.ListRootFolderAsync();
+
         if (RootFolder != null)
         {
+            var typee = RootFolder.Folders.FirstOrDefault()?.Path.GetType();
+            Debug.WriteLine(typee);
             CurrentFolders.Clear();
             CurrentFiles.Clear();
             foreach (var folder in RootFolder.Folders)
@@ -118,8 +121,8 @@ public partial class HomePageViewModel : ObservableObject
     public async Task LoadSpecificFolder(string folderId)
     {
         CurrentFolder = await _seedrService.ListFolderAsync((long.Parse(folderId)));
-        CurrentFolders  = CurrentFolder.Folders.ToObservableCollection();
-        CurrentFiles = CurrentFolder.Files.ToObservableCollection();
+        CurrentFolders  = CurrentFolder?.Folders.ToObservableCollection();
+        CurrentFiles = CurrentFolder?.Files.ToObservableCollection();
     }
 
     // Example: Adding a magnet link (you'd get the magnet from UI input)
@@ -146,29 +149,29 @@ public partial class HomePageViewModel : ObservableObject
     [RelayCommand]
     public async Task DownloadFileInBrowserAsync(long fileId)
     {
-        bool success = await _seedrService.DownloadFileOnPreferredBrowserAsync(fileId);
-        if (success)
-        {
-            _logger.LogInformation($"Initiated browser download for file ID: {fileId}");
-        }
-        else
-        {
-            _logger.LogError($"Failed to initiate browser download for file ID: {fileId}");
-        }
+        //bool success = await _seedrService.DownloadFileOnPreferredBrowserAsync(fileId);
+        //if (success)
+        //{
+        //    _logger.LogInformation($"Initiated browser download for file ID: {fileId}");
+        //}
+        //else
+        //{
+        //    _logger.LogError($"Failed to initiate browser download for file ID: {fileId}");
+        //}
     }
 
     // Example: Download a file using the browser
     [RelayCommand]
     public async Task DownloadFolderInBrowserAsync(long FolderId)
     {
-        bool success = await _seedrService.DownloadFolderOnPreferredBrowserAsync(FolderId);
-        if (success)
-        {
-            _logger.LogInformation($"Initiated browser download for Folder ID: {FolderId}");
-        }
-        else
-        {
-            _logger.LogError($"Failed to initiate browser download for file ID: {FolderId}");
-        }
+        //bool success = await _seedrService.DownloadFileOnPreferredBrowserAsync(FolderId);
+        //if (success)
+        //{
+        //    _logger.LogInformation($"Initiated browser download for Folder ID: {FolderId}");
+        //}
+        //else
+        //{
+        //    _logger.LogError($"Failed to initiate browser download for file ID: {FolderId}");
+        //}
     }
 }

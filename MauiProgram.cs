@@ -1,5 +1,5 @@
 ﻿using CommunityToolkit.Maui;
-using FlowHub_MAUI.Utilities.OtherUtils;
+
 using LiveQueryChatAppMAUI.ViewModel;
 using Microsoft.Extensions.Logging;
 using YBSeedrClient;
@@ -34,8 +34,8 @@ public static class MauiProgram
                 BaseAddress = new Uri("https://www.seedr.cc/rest/")
             };
 
-            string seedrEmail = APIKeys.SeedrEmail;
-            string seedrPassword = APIKeys.SeedrPassword;
+            string seedrEmail = "8brunel@gmail.com";
+            string seedrPassword = "Ice@102030405060";
             if (!string.IsNullOrWhiteSpace(seedrEmail) && !string.IsNullOrWhiteSpace(seedrPassword))
             {
                 var authToken = Convert.ToBase64String(System.Text.Encoding.ASCII.GetBytes($"{seedrEmail}:{seedrPassword}"));

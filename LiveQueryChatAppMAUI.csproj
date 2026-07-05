@@ -78,7 +78,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\YBSeedrClient\YBSeedrClient.csproj" />
+    <ProjectReference Include="..\YBTopaz8\YBSeedrPremiumClient\YBSeedrClient\YBSeedrClient.csproj" />
   </ItemGroup>
 
 

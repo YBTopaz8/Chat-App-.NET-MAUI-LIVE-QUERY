@@ -1,33 +1,46 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage
     x:Class="LiveQueryChatAppMAUI.MainPage"
+    x:Name="myPage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:Vm="clr-namespace:LiveQueryChatAppMAUI.ViewModel"
     xmlns:local="clr-namespace:LiveQueryChatAppMAUI"
-    xmlns:seedrModels="clr-namespace:YBSeedrClient.Models;assembly=YBSeedrClient"
+    xmlns:seedrModels="clr-namespace:YBSeedrClient.SeedrModels;assembly=YBSeedrClient"
     xmlns:syncf="http://schemas.syncfusion.com/maui/toolkit"
     xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
-    x:Name="myPage"
-    x:DataType="Vm:HomePageViewModel">
-    <Shell.TitleView>
-        <HorizontalStackLayout Margin="10">
-            <Label FontSize="34" Text="Welcome Back YBTopaz8!" />
+    x:DataType="Vm:HomePageViewModel"
+    >
 
-            <Button Command="{Binding InitializeCommand}" Text="Refresh Folders" />
-        </HorizontalStackLayout>
-    </Shell.TitleView>
     <Grid
+        Grid.Row="0"
         ColumnDefinitions="*"
-        RowDefinitions="auto,*,auto"
-        RowSpacing="15">
+        RowDefinitions="auto,auto,*"
+        RowSpacing="15"
+        >
 
         <Grid
-            Grid.Row="2"
+            Grid.Row="0"
+            Margin="10"
+            ColumnDefinitions="*,*"
+            ColumnSpacing="10"
+            >
+            <Button
+                Grid.Column="0"
+                Command="{Binding InitializeCommand}"
+                FontSize="24"
+                Text="Files"
+                />
+
+            <Button Grid.Column="1" Text="Tasks" />
+        </Grid>
+        <Grid
+            Grid.Row="1"
             Grid.Column="0"
             BackgroundColor="Black"
             ColumnDefinitions="*,auto"
-            RowDefinitions="auto,*">
+            RowDefinitions="auto,*"
+            >
 
 
             <Editor
@@ -35,7 +48,8 @@
                 Grid.Column="0"
                 Focused="LinkEditor_Focused"
                 TextChanged="LinkEditor_TextChanged"
-                Unfocused="LinkEditor_Unfocused" />
+                Unfocused="LinkEditor_Unfocused"
+                />
 
             <HorizontalStackLayout Grid.Column="1">
                 <Button
@@ -43,151 +57,36 @@
                     Command="{Binding AddMagnetCommand}"
                     CommandParameter="{Binding Text, Source={x:Reference LinkEditor}}"
                     Text="Add"
-                    TextColor="White" />
+                    TextColor="White"
+                    />
             </HorizontalStackLayout>
         </Grid>
 
         <CollectionView
-            Grid.Row="0"
+            Grid.Row="2"
             Grid.Column="0"
             BackgroundColor="Transparent"
             Header="Main Folder"
-            ItemsSource="{Binding RootFolder.Folders}">
+            ItemsSource="{Binding RootFolder.Folders}"
+            >
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="seedrModels:SeedrFolderItem">
-                    <Border
-                        Padding="20"
-                        BackgroundColor="Transparent"
-                        StrokeShape="RoundRectangle 20"
-                        StrokeThickness="0.4">
-                        <Border.GestureRecognizers>
-                            <TapGestureRecognizer
-                                x:Name="TapGest"
-                                CommandParameter="{Binding .}"
-                                NumberOfTapsRequired="1"
-                                Tapped="TapGest_Tapped" />
 
-                        </Border.GestureRecognizers>
-                        <Grid BackgroundColor="Transparent" ColumnDefinitions="0.1*,*,*,*">
-                            <CheckBox
-                                x:Name="SelectedCheckBox"
-                                Grid.Column="0"
-                                CheckedChanged="SelectedCheckBox_CheckedChanged" />
-                            <Label
-                                Grid.Column="1"
-                                Text="{Binding Name}"
-                                TextColor="White"
-                                VerticalTextAlignment="Center" />
-                            <Label
-                                Grid.Column="2"
-                                Text="{Binding Size}"
-                                TextColor="Grey"
-                                VerticalTextAlignment="Center" />
-                            <Label
-                                Grid.Column="3"
-                                Text="{Binding LastUpdate}"
-                                TextColor="Grey"
-                                VerticalTextAlignment="Center" />
-                        </Grid>
-                    </Border>
-                    <!--</syncf:SfEffectsView>-->
+                    <Grid ColumnDefinitions="*,auto,auto,auto,auto">
+
+                        <Label Grid.Column="0" Text="{Binding Path}" />
+                        <Label Grid.Column="1" Text="{Binding FilesCount}" />
+                        <Label Grid.Column="2" Text="{Binding LastUpdate}" />
+                        <Label Grid.Column="3" Text="{Binding Size}" />
+                        <Button Grid.Column="4" Text="More" />
+                    </Grid>
+
+
+
                 </DataTemplate>
             </CollectionView.ItemTemplate>
         </CollectionView>
 
-        <Grid
-            Grid.Row="1"
-            ColumnDefinitions="*,*"
-            ColumnSpacing="10">
-
-            <CollectionView
-                Grid.Column="0"
-                BackgroundColor="Transparent"
-                Header="{Binding CurrentFolder.Name, StringFormat='Folders in {0}'}"
-                ItemsSource="{Binding RootFolder.Folders}">
-                <CollectionView.ItemTemplate>
-                    <DataTemplate x:DataType="seedrModels:SeedrFolderItem">
-                        <Border
-                            Padding="5"
-                            BackgroundColor="Transparent"
-                            StrokeShape="RoundRectangle 20"
-                            StrokeThickness="0.4">
-                            <Border.GestureRecognizers>
-                                <TapGestureRecognizer
-                                    x:Name="TapGest"
-                                    CommandParameter="{Binding .}"
-                                    NumberOfTapsRequired="1"
-                                    Tapped="TapGest_Tapped" />
-
-                            </Border.GestureRecognizers>
-                            <Grid BackgroundColor="Transparent" ColumnDefinitions="0.1*,*,*,*">
-                                <CheckBox
-                                    x:Name="SelectedCheckBox"
-                                    Grid.Column="0"
-                                    CheckedChanged="SelectedCheckBox_CheckedChanged" />
-                                <Label
-                                    Grid.Column="1"
-                                    Text="{Binding Name}"
-                                    TextColor="White"
-                                    VerticalTextAlignment="Center" />
-                                <Label
-                                    Grid.Column="2"
-                                    Text="{Binding Size}"
-                                    TextColor="Grey"
-                                    VerticalTextAlignment="Center" />
-                                <Label
-                                    Grid.Column="3"
-                                    Text="{Binding LastUpdate}"
-                                    TextColor="Grey"
-                                    VerticalTextAlignment="Center" />
-                            </Grid>
-                        </Border>
-                        <!--</syncf:SfEffectsView>-->
-                    </DataTemplate>
-                </CollectionView.ItemTemplate>
-            </CollectionView>
-            <CollectionView
-                Grid.Column="1"
-                BackgroundColor="Transparent"
-                Header="{Binding CurrentFolder.Name, StringFormat='Files  in {0}'}"
-                ItemsSource="{Binding CurrentFiles}">
-                <CollectionView.ItemTemplate>
-                    <DataTemplate x:DataType="seedrModels:SeedrFileItem">
-                        <Border StrokeShape="RoundRectangle 20" StrokeThickness="0.4">
-                            <Border.GestureRecognizers>
-                                <TapGestureRecognizer
-                                    x:Name="FileTapGest"
-                                    CommandParameter="{Binding .}"
-                                    NumberOfTapsRequired="1"
-                                    Tapped="FileTapGest_Tapped" />
-
-                            </Border.GestureRecognizers>
-                            <Grid BackgroundColor="Transparent" ColumnDefinitions="0.1*,*,*,*">
-                                <CheckBox
-                                    x:Name="SelectedCheckBox"
-                                    Grid.Column="0"
-                                    CheckedChanged="SelectedCheckBox_CheckedChanged" />
-                                <Label
-                                    Grid.Column="1"
-                                    Text="{Binding Name}"
-                                    TextColor="White"
-                                    VerticalTextAlignment="Center" />
-                                <Label
-                                    Grid.Column="2"
-                                    Text="{Binding Size}"
-                                    TextColor="Grey"
-                                    VerticalTextAlignment="Center" />
-                                <Label
-                                    Grid.Column="3"
-                                    Text="{Binding LastUpdate}"
-                                    TextColor="Grey"
-                                    VerticalTextAlignment="Center" />
-                            </Grid>
-                        </Border>
-                    </DataTemplate>
-                </CollectionView.ItemTemplate>
-            </CollectionView>
-        </Grid>
 
     </Grid>
 </ContentPage>
