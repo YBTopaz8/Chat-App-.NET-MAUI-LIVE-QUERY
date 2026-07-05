@@ -460,56 +460,11 @@ public partial class ViewModel : ObservableObject
         try
         {    
             var query = ParseClient.Instance.GetQuery<TestChat>();
-            var subscription = await LiveClient!.Subscribe(query);
+            var subscription = LiveClient!.Subscribe(query);
             
-            await LiveClient.ConnectIfNeededAsync();
-            int retryDelaySeconds = 5;
-            int maxRetries = 10;
 
-            LiveClient.OnConnected
-                .Do(_ => Debug.WriteLine("LiveQuery connected."))
-                .RetryWhen(errors =>
-                    errors
-                        .Zip(Observable.Range(1, maxRetries), (error, attempt) => (error, attempt))
-                        .SelectMany(async tuple =>
-                        {
-                            if (tuple.attempt > maxRetries)
-                            {
-                                Debug.WriteLine($"Max retries reached. Error: {tuple.error.Message}");
-                                return Observable.Throw<Exception>(tuple.error); // Explicit type here
-                            }
-                            IsConnected = false;
-                            Debug.WriteLine($"Retry attempt {tuple.attempt} after {retryDelaySeconds} seconds...");
 
-                            // Explicit reconnect call before retry delay
-                            await LiveClient.ConnectIfNeededAsync(); // revive app!
 
-                            return Observable.Timer(TimeSpan.FromSeconds(retryDelaySeconds)).Select(_ => tuple.error); // Maintain compatible type
-                        })
-                )
-                .Subscribe(
-                    _ =>
-                    {
-                        IsConnected=true;
-                        Debug.WriteLine("Reconnected successfully.");
-                    },
-                    ex => Debug.WriteLine($"Failed to reconnect: {ex.Message}")
-                );
-
-            LiveClient.OnError
-                .Do(async ex =>
-                {
-                    Debug.WriteLine("LQ Error: " + ex.Message);
-                   await LiveClient.ConnectIfNeededAsync();  // Ensure reconnection on errors
-                })
-                .OnErrorResumeNext(Observable.Empty<Exception>()) // Prevent breaking the stream
-                .Subscribe();
-
-            LiveClient.OnDisconnected
-                .Do(info => Debug.WriteLine(info.userInitiated
-                    ? "User disconnected."
-                    : "Server disconnected."))
-                .Subscribe();
 
 
             LiveClient.OnSubscribed
@@ -519,28 +474,10 @@ public partial class ViewModel : ObservableObject
             int batchSize = 3; // Number of events to release at a time
             TimeSpan throttleTime = TimeSpan.FromMilliseconds(0000);
 
-            LiveClient.OnObjectEvent
-            .Where(e => e.subscription == subscription) // Filter relevant events
-            .GroupBy(e => e.evt)
-            .SelectMany(group =>
-            {
-                if (group.Key == Subscription.Event.Create)
-                {
-                    // Apply throttling only to CREATE events
-                    return group.Throttle(throttleTime)
-                                .Buffer(TimeSpan.FromSeconds(1), 3) // Further control
-                                .SelectMany(batch => batch); // Flatten the batch
-                }
-                else
-                {
-                    //do something with group !
-                    // Pass through other events without throttling
-                    return group;
-                }
-            })
-            .Subscribe(e =>
-            {
-                ProcessEvent(e, Messages);
+           subscription.On(Subscription.Event.Create, (e) =>
+           {
+
+                ProcessEvent(e);
             });
             
 
@@ -558,63 +495,12 @@ public partial class ViewModel : ObservableObject
             Debug.WriteLine("SetupLiveQuery Error: " + ex.Message);
         }
     }
-    void ProcessEvent((Subscription.Event evt, object objectDictionnary, Subscription subscription) e,
-                  ObservableCollection<TestChat> messages)
+    void ProcessEvent(TestChat chatObj)
     {
-        
-        var objData = e.objectDictionnary as Dictionary<string, object>;
-        TestChat chat;
 
-        switch (e.evt)
-        {
-            case Subscription.Event.Enter:
-                Debug.WriteLine("Entered");
-                break;
+        TestChat chat = chatObj;
 
-            case Subscription.Event.Leave:
-                Debug.WriteLine("Left");
-                break;
-
-            case Subscription.Event.Create:
-                
-                chat = ObjectMapper.MapFromDictionary<TestChat>(objData);
-                messages.Add(chat);
-
-                MainThread
-                    .BeginInvokeOnMainThread(() => msgColView.ScrollTo(chat, null, ScrollToPosition.End, true));
-                
-                break;
-
-            case Subscription.Event.Update:
-                chat = ObjectMapper.MapFromDictionary<TestChat>(objData);
-                var obj = messages.FirstOrDefault(x => x.ObjectId == chat.ObjectId);                
-                if (obj != null)
-                {
-                    messages[messages.IndexOf(obj)] = chat;
-                }
-                break;
-
-            case Subscription.Event.Delete:
-                chat = ObjectMapper.MapFromDictionary<TestChat>(objData);
-                var objToDelete = messages.FirstOrDefault(x => x.ObjectId == chat.ObjectId);
-
-                if (objToDelete != null)
-                {
-                    messages.Remove(objToDelete);
-                }
-                if (messages.Count>1)
-                {
-                    //for some interesting reasons, if you call this when messages.count <1 it will crash/disconnect LQ subscription. (or maybe send it to another thread?)
-                    MainThread.BeginInvokeOnMainThread(() => msgColView.ScrollTo(messages.LastOrDefault(), null, ScrollToPosition.End, true));
-                }
-                break;
-
-            default:
-                Debug.WriteLine("Unhandled event type.");
-                break;
-        }
-
-        Debug.WriteLine($"Processed {e.evt} on object {objData?.GetType()}");
+        Debug.WriteLine($"Processed {chatObj.Msg} on object {chatObj.GetType()}");
     }
     
 
@@ -637,10 +523,9 @@ public partial class ViewModel : ObservableObject
         try
         {
             // Step 1: Query the existing object by a unique identifier (e.g., Username, Msg)
-            var query = await ParseClient.Instance.GetQuery<TestChat>()
-                .WhereEqualTo("objectId",key.ObjectId )
-                .FirstAsync(); 
-            
+            var query =  ParseClient.Instance.GetQuery<TestChat>()
+                .WhereEqualTo(x => x.ObjectId, key.ObjectId)
+            ;
             TestChat? existingChat = await query.FirstAsync(); // Fetch the first matching object
 
             // Step 2: Update the properties of the fetched object

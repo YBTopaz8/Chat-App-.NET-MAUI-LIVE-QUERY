@@ -1,5 +1,4 @@
-﻿using FlowHub_MAUI.Utilities.OtherUtils;
-using Parse;
+﻿using Parse;
 using Parse.Infrastructure;
 using System.Diagnostics;
 
@@ -37,22 +36,14 @@ public partial class App : Application
                 return false;
             }
 
-            // Validate API Keys
-            if (string.IsNullOrEmpty(APIKeys.ApplicationId) || // PUT IN YOUR APP ID HERE
-                string.IsNullOrEmpty(APIKeys.ServerUri) || // PUT IN YOUR ServerUri ID HERE
-                string.IsNullOrEmpty(APIKeys.DotNetKEY)) // PUT IN YOUR DotNetKEY ID HERE
-                //You can use your Master Key instead of DOTNET but beware as it is the...Master Key
-            {
-                Console.WriteLine("Invalid API Keys: Unable to initialize ParseClient.");
-                return false;
-            }
+           
 
             // Create ParseClient
             ParseClient client = new ParseClient(new ServerConnectionData
             {
-                ApplicationID = APIKeys.ApplicationId,
-                ServerURI = APIKeys.ServerUri,
-                Key = APIKeys.DotNetKEY,
+                ApplicationID = "ZPcqJVoyIqDYODqknB8KR3cgffA4zx67LfXtB85v",
+                ServerURI = "https://flowhub.b4a.io",
+                Key = "IuUtTIslbe94qp7bbPZ7DvTJC0MQMxHid3hJWeCb",
 
             }
             );
